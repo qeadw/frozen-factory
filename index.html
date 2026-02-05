@@ -1269,13 +1269,13 @@ function generateWorld() {
         });
     }
 
-    // Generate NPCs
+    // Generate NPCs - spawn away from player start (256,256)
     game.npcs = [
         {
             type: 'scrap_dealer',
             name: 'Scrap Dealer',
-            x: 260,
-            y: 260,
+            x: 280,
+            y: 280,
             icon: '🧔',
             buys: ['iron_ore', 'copper_ore', 'coal'],
             sells: ['miner', 'furnace', 'heater', 'solar_panel']
@@ -1283,8 +1283,8 @@ function generateWorld() {
         {
             type: 'parts_merchant',
             name: 'Parts Merchant',
-            x: 270,
-            y: 250,
+            x: 295,
+            y: 270,
             icon: '👨‍🔧',
             buys: ['iron_ingot', 'copper_ingot', 'steel', 'circuit'],
             sells: ['assembler', 'battery', 'conveyor', 'storage']
@@ -1292,8 +1292,8 @@ function generateWorld() {
         {
             type: 'collector',
             name: 'Collector',
-            x: 240,
-            y: 270,
+            x: 310,
+            y: 290,
             icon: '🎩',
             buys: ['crystal', 'dark_matter', 'quantum_ore'],
             sells: ['landing_pad', 'repair_robot', 'extinguisher']
@@ -1489,8 +1489,8 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 function handleLeftClick(e) {
     const worldPos = screenToWorld(e.clientX, e.clientY);
-    const wx = wrapCoord(worldPos.x);
-    const wy = wrapCoord(worldPos.y);
+    const wx = wrapCoord(Math.floor(worldPos.x));
+    const wy = wrapCoord(Math.floor(worldPos.y));
 
     // Rocket launcher takes priority
     if (game.cheatsActive.rocketLauncher) {
@@ -1527,8 +1527,8 @@ function handleRightClick(e) {
         selectedBuild = null;
     } else {
         const worldPos = screenToWorld(e.clientX, e.clientY);
-        const wx = wrapCoord(worldPos.x);
-        const wy = wrapCoord(worldPos.y);
+        const wx = wrapCoord(Math.floor(worldPos.x));
+        const wy = wrapCoord(Math.floor(worldPos.y));
 
         const machine = getMachineAt(wx, wy);
         if (machine) {
@@ -2049,6 +2049,34 @@ function updateDayNight(dt) {
 }
 
 // ==================== RENDERING ====================
+const CHUNK_SIZE = 16;
+
+function renderChunk(chunkX, chunkY) {
+    const baseX = chunkX * CHUNK_SIZE;
+    const baseY = chunkY * CHUNK_SIZE;
+
+    for (let dy = 0; dy < CHUNK_SIZE; dy++) {
+        for (let dx = 0; dx < CHUNK_SIZE; dx++) {
+            const x = baseX + dx;
+            const y = baseY + dy;
+            const wx = wrapCoord(x);
+            const wy = wrapCoord(y);
+
+            // Skip unexplored tiles
+            if (!game.explored[wy] || !game.explored[wy][wx]) continue;
+
+            const screen = worldToScreen(x, y);
+
+            // Skip if off-screen
+            if (screen.x < -CONFIG.TILE_WIDTH || screen.x > canvas.width + CONFIG.TILE_WIDTH) continue;
+            if (screen.y < -CONFIG.TILE_HEIGHT * 2 || screen.y > canvas.height + CONFIG.TILE_HEIGHT * 2) continue;
+
+            const tile = game.tiles[wy][wx];
+            drawIsometricTile(screen.x, screen.y, getTileColor(tile.type));
+        }
+    }
+}
+
 function render() {
     // Clear
     ctx.fillStyle = game.isDay ? '#1a2a3a' : '#0a0a12';
@@ -2058,25 +2086,16 @@ function render() {
     const topLeft = screenToWorld(0, 0);
     const bottomRight = screenToWorld(canvas.width, canvas.height);
 
-    const startX = Math.floor(topLeft.x) - 5;
-    const endX = Math.ceil(bottomRight.x) + 5;
-    const startY = Math.floor(topLeft.y) - 5;
-    const endY = Math.ceil(bottomRight.y) + 5;
+    // Chunk-based rendering for better performance
+    const startChunkX = Math.floor((topLeft.x - 10) / CHUNK_SIZE);
+    const endChunkX = Math.ceil((bottomRight.x + 10) / CHUNK_SIZE);
+    const startChunkY = Math.floor((topLeft.y - 10) / CHUNK_SIZE);
+    const endChunkY = Math.ceil((bottomRight.y + 10) / CHUNK_SIZE);
 
-    // Draw tiles
-    for (let y = startY; y <= endY; y++) {
-        for (let x = startX; x <= endX; x++) {
-            const wx = wrapCoord(x);
-            const wy = wrapCoord(y);
-
-            // Fog of war
-            if (!game.explored[wy][wx]) continue;
-
-            const screen = worldToScreen(x, y);
-            const tile = game.tiles[wy][wx];
-
-            // Draw tile
-            drawIsometricTile(screen.x, screen.y, getTileColor(tile.type));
+    // Draw tiles by chunk
+    for (let chunkY = startChunkY; chunkY <= endChunkY; chunkY++) {
+        for (let chunkX = startChunkX; chunkX <= endChunkX; chunkX++) {
+            renderChunk(chunkX, chunkY);
         }
     }
 
@@ -2752,7 +2771,7 @@ function saveGame() {
     };
 
     localStorage.setItem('frozen_factory_save', JSON.stringify(saveData));
-    notify('Game saved!');
+    // Silent auto-save - no notification
 }
 
 function loadGame() {
