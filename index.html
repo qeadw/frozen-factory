@@ -4238,15 +4238,66 @@ function render() {
         const worldPos = screenToWorld(mouseX, mouseY);
         const screen = worldToScreen(Math.floor(worldPos.x), Math.floor(worldPos.y));
         const def = MACHINES[selectedBuild];
+        const z = game.camera.zoom;
 
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = 0.6;
         ctx.fillStyle = def.color;
-        const size = 30 * game.camera.zoom;
+        const size = 30 * z;
         ctx.fillRect(screen.x - size/2, screen.y - size, size, size);
         ctx.fillStyle = '#fff';
-        ctx.font = `${16 * game.camera.zoom}px Arial`;
+        ctx.font = `${16 * z}px Arial`;
         ctx.textAlign = 'center';
         ctx.fillText(def.icon, screen.x, screen.y - size/2 + 5);
+
+        // Draw direction arrow for conveyors and directional machines
+        if (selectedBuild === 'conveyor' || selectedBuild === 'pipe') {
+            ctx.globalAlpha = 0.9;
+
+            // Arrow direction based on buildRotation
+            // 0=right, 1=down, 2=left, 3=up (in isometric)
+            const arrowLength = 40 * z;
+            const arrowHead = 12 * z;
+
+            // Isometric direction offsets
+            const dirs = [
+                { dx: 1, dy: 0.5 },   // right
+                { dx: -1, dy: 0.5 },  // down
+                { dx: -1, dy: -0.5 }, // left
+                { dx: 1, dy: -0.5 }   // up
+            ];
+            const dir = dirs[buildRotation % 4];
+
+            const startX = screen.x;
+            const startY = screen.y - size/2;
+            const endX = startX + dir.dx * arrowLength;
+            const endY = startY + dir.dy * arrowLength;
+
+            // Arrow line
+            ctx.strokeStyle = '#ffcc00';
+            ctx.lineWidth = 4 * z;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+
+            // Arrow head
+            ctx.fillStyle = '#ffcc00';
+            ctx.beginPath();
+            const angle = Math.atan2(dir.dy, dir.dx);
+            ctx.moveTo(endX, endY);
+            ctx.lineTo(endX - arrowHead * Math.cos(angle - 0.5), endY - arrowHead * Math.sin(angle - 0.5));
+            ctx.lineTo(endX - arrowHead * Math.cos(angle + 0.5), endY - arrowHead * Math.sin(angle + 0.5));
+            ctx.closePath();
+            ctx.fill();
+
+            // Direction label
+            const labels = ['→', '↓', '←', '↑'];
+            ctx.fillStyle = '#ffcc00';
+            ctx.font = `bold ${14 * z}px Arial`;
+            ctx.fillText(labels[buildRotation % 4], endX + dir.dx * 10, endY + dir.dy * 10);
+        }
+
         ctx.globalAlpha = 1;
     }
 
