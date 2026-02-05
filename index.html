@@ -287,43 +287,81 @@
             height: 100%;
         }
 
-        /* Inventory Panel */
+        /* Inventory Panel - Fullscreen */
         #inventoryPanel {
             position: absolute;
-            top: 80px;
-            right: 20px;
-            width: 250px;
-            background: var(--ui-bg);
-            border: 2px solid var(--ui-border);
-            border-radius: 5px;
-            padding: 10px;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
             display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
         }
 
         #inventoryPanel h3 {
-            color: var(--ui-text);
-            margin-bottom: 10px;
+            color: var(--ui-accent);
+            margin-bottom: 20px;
+            font-size: 24px;
         }
 
         #inventoryGrid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 5px;
+            gap: 10px;
+            padding: 20px;
+            background: var(--ui-bg);
+            border: 2px solid var(--ui-border);
+            border-radius: 10px;
         }
 
         .inv-slot {
-            width: 50px;
-            height: 50px;
+            width: 80px;
+            height: 80px;
             background: var(--ui-button);
             border: 2px solid var(--ui-border);
-            border-radius: 5px;
+            border-radius: 8px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-size: 10px;
+            font-size: 12px;
             color: var(--ui-text);
             cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .inv-slot:hover {
+            background: var(--ui-highlight);
+            transform: scale(1.05);
+        }
+
+        .inv-slot .item-icon {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .inv-slot .item-count {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        #inventoryClose {
+            margin-top: 20px;
+            padding: 10px 30px;
+            background: var(--ui-button);
+            border: 2px solid var(--ui-border);
+            border-radius: 5px;
+            color: var(--ui-text);
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #inventoryClose:hover {
+            background: var(--ui-highlight);
         }
 
         .inv-slot:hover {
@@ -851,8 +889,9 @@
 
         <!-- Inventory Panel -->
         <div id="inventoryPanel">
-            <h3>Inventory (I)</h3>
+            <h3>INVENTORY</h3>
             <div id="inventoryGrid"></div>
+            <button id="inventoryClose" onclick="toggleInventory()">Close (I)</button>
         </div>
 
         <!-- Notifications -->
@@ -1041,6 +1080,10 @@ let game = {
     npcs: [],
     explored: [],
     particles: [],
+    cables: [], // Power cable connections between machines
+
+    // Cable tool state
+    cableStart: null, // First machine selected for cable connection
 
     // Stats
     credits: 100,
@@ -1337,6 +1380,18 @@ const MACHINES = {
         heat: 10,
         size: 1,
         description: 'Creates super fuel for planet travel'
+    },
+    cable_tool: {
+        name: 'Cable Tool',
+        icon: '⚡',
+        color: '#ffcc00',
+        cost: { cable: 1 },
+        buyPrice: 0,
+        power: 0,
+        heat: 0,
+        size: 0,
+        isTool: true,
+        description: 'Click two machines to connect them with a power cable'
     }
 };
 
@@ -2751,7 +2806,8 @@ function setupTutorialLoadout() {
         { type: 'copper_ore', count: 8 },
         { type: 'coal', count: 5 },
         { type: 'iron_ingot', count: 5 },
-        { type: 'copper_ingot', count: 4 }
+        { type: 'copper_ingot', count: 4 },
+        { type: 'cable', count: 10 }
     ];
 }
 
@@ -2896,6 +2952,17 @@ function handleLeftClick(e) {
     }
 
     if (selectedBuild) {
+        // Handle cable tool specially
+        if (selectedBuild === 'cable_tool') {
+            const machine = getMachineAt(wx, wy);
+            if (machine) {
+                handleCableConnection(machine);
+            } else {
+                notify('Click on a machine to connect', 'warning');
+            }
+            return;
+        }
+
         // Place building
         placeMachine(selectedBuild, wx, wy);
     } else {
@@ -2916,6 +2983,56 @@ function handleLeftClick(e) {
                 }
             }
         }
+    }
+}
+
+function handleCableConnection(machine) {
+    if (!game.cableStart) {
+        // First machine selected
+        game.cableStart = machine;
+        notify(`Cable start: ${MACHINES[machine.type].name} - Click another machine to connect`);
+    } else if (game.cableStart === machine) {
+        // Clicked same machine, cancel
+        game.cableStart = null;
+        notify('Cable connection cancelled');
+    } else {
+        // Second machine - create connection
+        const start = game.cableStart;
+        const end = machine;
+
+        // Check if connection already exists
+        const existingCable = game.cables.find(c =>
+            (c.from.x === start.x && c.from.y === start.y && c.to.x === end.x && c.to.y === end.y) ||
+            (c.from.x === end.x && c.from.y === end.y && c.to.x === start.x && c.to.y === start.y)
+        );
+
+        if (existingCable) {
+            notify('Machines already connected!', 'warning');
+        } else {
+            // Check for cable resource
+            const cableItem = game.robot.inventory.find(i => i.type === 'cable');
+            if (!cableItem || cableItem.count < 1) {
+                if (!game.cheatsActive.freeCrafting) {
+                    notify('Need 1 Cable to connect machines', 'warning');
+                    game.cableStart = null;
+                    return;
+                }
+            } else if (!game.cheatsActive.freeCrafting) {
+                cableItem.count--;
+                if (cableItem.count <= 0) {
+                    game.robot.inventory = game.robot.inventory.filter(i => i.count > 0);
+                }
+            }
+
+            // Create cable connection
+            game.cables.push({
+                from: { x: start.x, y: start.y },
+                to: { x: end.x, y: end.y }
+            });
+            notify(`Connected ${MACHINES[start.type].name} to ${MACHINES[end.type].name}`);
+        }
+
+        game.cableStart = null;
     }
 }
 
@@ -3653,6 +3770,61 @@ function render() {
         ctx.fillText('●', screen.x, screen.y);
     });
 
+    // Draw cables between machines
+    ctx.strokeStyle = '#ffcc00';
+    ctx.lineWidth = 3 * game.camera.zoom;
+    game.cables.forEach(cable => {
+        const fromScreen = worldToScreen(cable.from.x, cable.from.y);
+        const toScreen = worldToScreen(cable.to.x, cable.to.y);
+
+        // Skip if both endpoints are off-screen
+        if ((fromScreen.x < -100 || fromScreen.x > canvas.width + 100) &&
+            (toScreen.x < -100 || toScreen.x > canvas.width + 100)) return;
+
+        // Draw cable line with slight curve
+        ctx.beginPath();
+        ctx.moveTo(fromScreen.x, fromScreen.y - 15 * game.camera.zoom);
+
+        // Add a slight sag to the cable
+        const midX = (fromScreen.x + toScreen.x) / 2;
+        const midY = (fromScreen.y + toScreen.y) / 2 + 10 * game.camera.zoom;
+        ctx.quadraticCurveTo(midX, midY, toScreen.x, toScreen.y - 15 * game.camera.zoom);
+
+        ctx.stroke();
+
+        // Draw connection points
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath();
+        ctx.arc(fromScreen.x, fromScreen.y - 15 * game.camera.zoom, 4 * game.camera.zoom, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(toScreen.x, toScreen.y - 15 * game.camera.zoom, 4 * game.camera.zoom, 0, Math.PI * 2);
+        ctx.fill();
+    });
+
+    // Draw cable in progress (from cableStart to cursor)
+    if (game.cableStart && selectedBuild === 'cable_tool') {
+        const startScreen = worldToScreen(game.cableStart.x, game.cableStart.y);
+        ctx.strokeStyle = '#ffcc0088';
+        ctx.lineWidth = 2 * game.camera.zoom;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(startScreen.x, startScreen.y - 15 * game.camera.zoom);
+        ctx.lineTo(mouseX, mouseY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Highlight the start machine
+        ctx.strokeStyle = '#ffcc00';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(
+            startScreen.x - 20 * game.camera.zoom,
+            startScreen.y - 35 * game.camera.zoom,
+            40 * game.camera.zoom,
+            40 * game.camera.zoom
+        );
+    }
+
     // Draw machines with new sprites
     game.machines.forEach(m => {
         const screen = worldToScreen(m.x, m.y);
@@ -3910,9 +4082,10 @@ function updateUI() {
 // ==================== INVENTORY ====================
 function toggleInventory() {
     const panel = document.getElementById('inventoryPanel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    const isHidden = panel.style.display === 'none' || panel.style.display === '';
+    panel.style.display = isHidden ? 'flex' : 'none';
 
-    if (panel.style.display === 'block') {
+    if (isHidden) {
         renderInventory();
     }
 }
@@ -3928,8 +4101,15 @@ function renderInventory() {
         const item = game.robot.inventory[i];
         if (item) {
             const res = RESOURCES[item.type];
-            slot.innerHTML = `<div style="font-size: 20px;">${res?.icon || '?'}</div><div>${item.count}</div>`;
+            slot.innerHTML = `
+                <div class="item-icon" style="color: ${res?.color || '#fff'}">${res?.icon || '?'}</div>
+                <div class="item-count">${item.count}</div>
+                <div style="font-size: 9px; opacity: 0.7;">${res?.name || item.type}</div>
+            `;
             slot.title = res?.name || item.type;
+            slot.style.borderColor = res?.color || 'var(--ui-border)';
+        } else {
+            slot.innerHTML = '<div style="opacity: 0.3;">Empty</div>';
         }
 
         grid.appendChild(slot);
@@ -4345,6 +4525,7 @@ function saveGame() {
         cheats: game.cheatsActive,
         theme: game.theme,
         sunTrackers: game.sunTrackers,
+        cables: game.cables,
         savedAt: Date.now()
     };
 
@@ -4370,6 +4551,7 @@ function loadGame(slot) {
         game.cheatsActive = saveData.cheats || {};
         game.theme = saveData.theme;
         game.sunTrackers = saveData.sunTrackers || [];
+        game.cables = saveData.cables || [];
 
         applyTheme(game.theme);
         return true;
