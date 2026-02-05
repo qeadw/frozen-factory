@@ -2637,6 +2637,8 @@ function generateWorld() {
     // Initialize tiles
     game.tiles = [];
     game.explored = [];
+    game.cables = [];
+    game.cableStart = null;
 
     for (let y = 0; y < CONFIG.MAP_SIZE; y++) {
         game.tiles[y] = [];
@@ -3771,9 +3773,10 @@ function render() {
     });
 
     // Draw cables between machines
-    ctx.strokeStyle = '#ffcc00';
-    ctx.lineWidth = 3 * game.camera.zoom;
-    game.cables.forEach(cable => {
+    if (game.cables && game.cables.length > 0) {
+        ctx.strokeStyle = '#ffcc00';
+        ctx.lineWidth = 3 * game.camera.zoom;
+        game.cables.forEach(cable => {
         const fromScreen = worldToScreen(cable.from.x, cable.from.y);
         const toScreen = worldToScreen(cable.to.x, cable.to.y);
 
@@ -3800,7 +3803,8 @@ function render() {
         ctx.beginPath();
         ctx.arc(toScreen.x, toScreen.y - 15 * game.camera.zoom, 4 * game.camera.zoom, 0, Math.PI * 2);
         ctx.fill();
-    });
+        });
+    }
 
     // Draw cable in progress (from cableStart to cursor)
     if (game.cableStart && selectedBuild === 'cable_tool') {
