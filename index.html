@@ -1,0 +1,3090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frozen Factory</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a12;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+        }
+
+        #gameCanvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        /* Theme Selection Modal */
+        #themeModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #themeModal h1 {
+            color: #88ccff;
+            font-size: 48px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #88ccff;
+        }
+
+        #themeModal h2 {
+            color: #aaa;
+            font-size: 18px;
+            margin-bottom: 40px;
+        }
+
+        .theme-options {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .theme-btn {
+            width: 150px;
+            height: 100px;
+            border: 3px solid #333;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .theme-btn:hover {
+            transform: scale(1.1);
+            border-color: #fff;
+        }
+
+        .theme-btn span {
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        #theme-cold { background: linear-gradient(135deg, #1a3a5c, #0d1f33); }
+        #theme-cold span { color: #88ccff; }
+
+        #theme-warm { background: linear-gradient(135deg, #5c3a1a, #331f0d); }
+        #theme-warm span { color: #ffaa44; }
+
+        #theme-green { background: linear-gradient(135deg, #1a3a1a, #0d1f0d); }
+        #theme-green span { color: #44ff88; }
+
+        #theme-contrast { background: linear-gradient(135deg, #000, #222); }
+        #theme-contrast span { color: #fff; }
+
+        /* UI Overlay */
+        #ui {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+        }
+
+        #ui > * {
+            pointer-events: auto;
+        }
+
+        /* Top Bar */
+        #topBar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--ui-bg);
+            border-bottom: 2px solid var(--ui-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .resource-bar {
+            display: flex;
+            gap: 15px;
+        }
+
+        .resource-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--ui-text);
+            font-size: 14px;
+        }
+
+        .resource-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        #dayNightIndicator {
+            width: 200px;
+            height: 30px;
+            background: #111;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #dayNightFill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffcc00, #ff6600);
+            transition: width 0.5s;
+        }
+
+        #dayNightText {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 12px;
+            text-shadow: 0 0 5px #000;
+        }
+
+        #tempIndicator {
+            color: var(--ui-text);
+            font-size: 14px;
+        }
+
+        /* Bottom Bar */
+        #bottomBar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 120px;
+            background: var(--ui-bg);
+            border-top: 2px solid var(--ui-border);
+            display: flex;
+            padding: 10px 20px;
+            gap: 20px;
+        }
+
+        #buildMenu {
+            width: 400px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            overflow-y: auto;
+        }
+
+        .build-item {
+            width: 45px;
+            height: 45px;
+            background: var(--ui-button);
+            border: 2px solid var(--ui-border);
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+
+        .build-item:hover {
+            background: var(--ui-highlight);
+            transform: scale(1.1);
+        }
+
+        .build-item.selected {
+            border-color: var(--ui-accent);
+            box-shadow: 0 0 10px var(--ui-accent);
+        }
+
+        #selectedInfo {
+            flex: 1;
+            background: var(--ui-button);
+            border-radius: 5px;
+            padding: 10px;
+            color: var(--ui-text);
+        }
+
+        #robotStatus {
+            width: 200px;
+            background: var(--ui-button);
+            border-radius: 5px;
+            padding: 10px;
+            color: var(--ui-text);
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .status-bar-mini {
+            width: 100%;
+            height: 8px;
+            background: #222;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 2px;
+        }
+
+        .status-bar-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        /* Minimap */
+        #minimap {
+            position: absolute;
+            bottom: 140px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0,0,0,0.8);
+            border: 2px solid var(--ui-border);
+            border-radius: 5px;
+        }
+
+        #minimapCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Inventory Panel */
+        #inventoryPanel {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            width: 250px;
+            background: var(--ui-bg);
+            border: 2px solid var(--ui-border);
+            border-radius: 5px;
+            padding: 10px;
+            display: none;
+        }
+
+        #inventoryPanel h3 {
+            color: var(--ui-text);
+            margin-bottom: 10px;
+        }
+
+        #inventoryGrid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+        }
+
+        .inv-slot {
+            width: 50px;
+            height: 50px;
+            background: var(--ui-button);
+            border: 2px solid var(--ui-border);
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            color: var(--ui-text);
+            cursor: pointer;
+        }
+
+        .inv-slot:hover {
+            border-color: var(--ui-accent);
+        }
+
+        /* Pause Menu */
+        #pauseMenu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--ui-bg);
+            border: 3px solid var(--ui-border);
+            border-radius: 10px;
+            padding: 30px;
+            display: none;
+            z-index: 100;
+        }
+
+        #pauseMenu h2 {
+            color: var(--ui-text);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .pause-btn {
+            display: block;
+            width: 200px;
+            padding: 10px;
+            margin: 10px auto;
+            background: var(--ui-button);
+            border: 2px solid var(--ui-border);
+            border-radius: 5px;
+            color: var(--ui-text);
+            font-family: inherit;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .pause-btn:hover {
+            background: var(--ui-highlight);
+        }
+
+        /* Cheat Menu */
+        #cheatMenu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(50, 0, 0, 0.95);
+            border: 3px solid #ff0000;
+            border-radius: 10px;
+            padding: 30px;
+            display: none;
+            z-index: 200;
+        }
+
+        #cheatMenu h2 {
+            color: #ff4444;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .cheat-btn {
+            display: block;
+            width: 200px;
+            padding: 10px;
+            margin: 10px auto;
+            background: #330000;
+            border: 2px solid #660000;
+            border-radius: 5px;
+            color: #ff6666;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .cheat-btn:hover {
+            background: #550000;
+        }
+
+        .cheat-btn.active {
+            background: #660000;
+            border-color: #ff0000;
+        }
+
+        /* Tooltips */
+        #tooltip {
+            position: fixed;
+            background: var(--ui-bg);
+            border: 2px solid var(--ui-border);
+            border-radius: 5px;
+            padding: 10px;
+            color: var(--ui-text);
+            font-size: 12px;
+            max-width: 250px;
+            display: none;
+            z-index: 500;
+            pointer-events: none;
+        }
+
+        /* Machine Menu */
+        #machineMenu {
+            position: fixed;
+            background: var(--ui-bg);
+            border: 2px solid var(--ui-border);
+            border-radius: 5px;
+            padding: 15px;
+            display: none;
+            z-index: 150;
+            min-width: 200px;
+        }
+
+        #machineMenu h3 {
+            color: var(--ui-accent);
+            margin-bottom: 10px;
+        }
+
+        .machine-stat {
+            color: var(--ui-text);
+            font-size: 12px;
+            margin: 5px 0;
+        }
+
+        /* Trading Modal */
+        #tradeModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--ui-bg);
+            border: 3px solid var(--ui-border);
+            border-radius: 10px;
+            padding: 20px;
+            display: none;
+            z-index: 200;
+            min-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        #tradeModal h2 {
+            color: var(--ui-accent);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .trade-section {
+            margin-bottom: 20px;
+        }
+
+        .trade-section h3 {
+            color: var(--ui-text);
+            font-size: 14px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--ui-border);
+            padding-bottom: 5px;
+        }
+
+        .trade-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .trade-item {
+            background: var(--ui-button);
+            border: 2px solid var(--ui-border);
+            border-radius: 5px;
+            padding: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .trade-item:hover {
+            border-color: var(--ui-accent);
+            background: var(--ui-highlight);
+        }
+
+        .trade-item .icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .trade-item .name {
+            color: var(--ui-text);
+            font-size: 11px;
+            margin-bottom: 3px;
+        }
+
+        .trade-item .price {
+            color: var(--ui-accent);
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .trade-item.sell {
+            border-color: #448844;
+        }
+
+        .trade-item.buy {
+            border-color: #884444;
+        }
+
+        /* Planet Travel Modal */
+        #travelModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--ui-bg);
+            border: 3px solid var(--ui-border);
+            border-radius: 10px;
+            padding: 20px;
+            display: none;
+            z-index: 200;
+            min-width: 400px;
+        }
+
+        #travelModal h2 {
+            color: var(--ui-accent);
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .planet-option {
+            background: var(--ui-button);
+            border: 2px solid var(--ui-border);
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .planet-option:hover {
+            border-color: var(--ui-accent);
+        }
+
+        .planet-option.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .planet-option h4 {
+            color: var(--ui-accent);
+            margin-bottom: 5px;
+        }
+
+        .planet-option p {
+            color: var(--ui-text);
+            font-size: 11px;
+            margin: 2px 0;
+        }
+
+        .planet-warning {
+            color: #ff6666;
+            font-weight: bold;
+        }
+
+        /* Notifications */
+        #notifications {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            width: 300px;
+        }
+
+        .notification {
+            background: var(--ui-bg);
+            border-left: 4px solid var(--ui-accent);
+            padding: 10px;
+            margin-bottom: 10px;
+            color: var(--ui-text);
+            font-size: 12px;
+            border-radius: 0 5px 5px 0;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.warning {
+            border-color: #ffaa00;
+        }
+
+        .notification.danger {
+            border-color: #ff4444;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Selection -->
+    <div id="themeModal">
+        <h1>FROZEN FACTORY</h1>
+        <h2>Select UI Theme</h2>
+        <div class="theme-options">
+            <button class="theme-btn" id="theme-cold" onclick="selectTheme('cold')">
+                <span>Cold Blue</span>
+            </button>
+            <button class="theme-btn" id="theme-warm" onclick="selectTheme('warm')">
+                <span>Warm Amber</span>
+            </button>
+            <button class="theme-btn" id="theme-green" onclick="selectTheme('green')">
+                <span>Green Terminal</span>
+            </button>
+            <button class="theme-btn" id="theme-contrast" onclick="selectTheme('contrast')">
+                <span>High Contrast</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Overlay -->
+    <div id="ui">
+        <!-- Top Bar -->
+        <div id="topBar">
+            <div class="resource-bar">
+                <div class="resource-item">
+                    <div class="resource-icon" style="background: #888;"></div>
+                    <span id="res-iron">0</span>
+                </div>
+                <div class="resource-item">
+                    <div class="resource-icon" style="background: #c77;"></div>
+                    <span id="res-copper">0</span>
+                </div>
+                <div class="resource-item">
+                    <div class="resource-icon" style="background: #333;"></div>
+                    <span id="res-coal">0</span>
+                </div>
+                <div class="resource-item">
+                    <div class="resource-icon" style="background: #88f;"></div>
+                    <span id="res-crystal">0</span>
+                </div>
+                <div class="resource-item">
+                    <div class="resource-icon" style="background: gold;"></div>
+                    <span id="res-credits">0</span> CR
+                </div>
+            </div>
+            <div class="status-bar">
+                <div id="dayNightIndicator">
+                    <div id="dayNightFill"></div>
+                    <span id="dayNightText">DAY 00:00</span>
+                </div>
+                <div id="tempIndicator">🌡️ -10°C</div>
+            </div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div id="bottomBar">
+            <div id="buildMenu"></div>
+            <div id="selectedInfo">
+                <h4 style="color: var(--ui-accent);">Nothing Selected</h4>
+                <p style="font-size: 12px;">Click on a machine or use build menu</p>
+            </div>
+            <div id="robotStatus">
+                <h4 style="color: var(--ui-accent); margin-bottom: 10px;">Robot Status</h4>
+                <div class="status-row">
+                    <span>Battery</span>
+                    <span id="batteryPercent">100%</span>
+                </div>
+                <div class="status-bar-mini">
+                    <div class="status-bar-fill" id="batteryBar" style="background: #4f4; width: 100%;"></div>
+                </div>
+                <div class="status-row" style="margin-top: 10px;">
+                    <span>Temperature</span>
+                    <span id="robotTempVal">OK</span>
+                </div>
+                <div class="status-bar-mini">
+                    <div class="status-bar-fill" id="tempBar" style="background: #4f4; width: 50%;"></div>
+                </div>
+                <div class="status-row" style="margin-top: 10px;">
+                    <span>HP</span>
+                    <span id="robotHPVal">100%</span>
+                </div>
+                <div class="status-bar-mini">
+                    <div class="status-bar-fill" id="hpBar" style="background: #4f4; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Minimap -->
+        <div id="minimap">
+            <canvas id="minimapCanvas"></canvas>
+        </div>
+
+        <!-- Inventory Panel -->
+        <div id="inventoryPanel">
+            <h3>Inventory (I)</h3>
+            <div id="inventoryGrid"></div>
+        </div>
+
+        <!-- Notifications -->
+        <div id="notifications"></div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pauseMenu">
+        <h2>PAUSED</h2>
+        <button class="pause-btn" onclick="resumeGame()">Resume</button>
+        <button class="pause-btn" onclick="saveGame()">Save Game</button>
+        <button class="pause-btn" onclick="showControls()">Controls</button>
+        <button class="pause-btn" onclick="quitToMenu()">Quit to Menu</button>
+    </div>
+
+    <!-- Cheat Menu -->
+    <div id="cheatMenu">
+        <h2>🔧 CHEAT MENU 🔧</h2>
+        <button class="cheat-btn" onclick="cheatAddBattery()">Add Battery</button>
+        <button class="cheat-btn" onclick="cheatAddWarmth()">Add Warmth</button>
+        <button class="cheat-btn" onclick="cheatAddItems()">Add Items</button>
+        <button class="cheat-btn" id="cheatFreeCraft" onclick="cheatFreeCrafting()">Free Crafting</button>
+        <button class="cheat-btn" onclick="cheatLantern()">Lantern (Reveal Map)</button>
+        <button class="cheat-btn" id="cheatNoDeath" onclick="cheatNoDeath()">No Death</button>
+        <button class="cheat-btn" id="cheatRocket" onclick="cheatRocketLauncher()">Rocket Launcher</button>
+        <button class="cheat-btn" onclick="closeCheatMenu()">Close</button>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip"></div>
+
+    <!-- Machine Menu -->
+    <div id="machineMenu"></div>
+
+    <!-- Trading Modal -->
+    <div id="tradeModal">
+        <h2 id="tradeTitle">Trading</h2>
+        <div id="tradeContent"></div>
+        <button class="pause-btn" onclick="closeTradeModal()">Close</button>
+    </div>
+
+    <!-- Planet Travel Modal -->
+    <div id="travelModal">
+        <h2>🚀 Planet Travel</h2>
+        <div id="travelContent"></div>
+        <button class="pause-btn" onclick="closeTravelModal()">Cancel</button>
+    </div>
+
+<script>
+// ==================== CONFIGURATION ====================
+const CONFIG = {
+    TILE_WIDTH: 64,
+    TILE_HEIGHT: 32,
+    MAP_SIZE: 512,
+    SAVE_INTERVAL: 5000,
+    INVENTORY_SIZE: 16,
+
+    // Day/Night durations in ms per planet
+    PLANETS: {
+        terra_prime: { dayLength: 600000, nightLength: 900000, baseTemp: -10, name: 'Terra Prime' },
+        frost_moon: { dayLength: 480000, nightLength: 1020000, baseTemp: -20, name: 'Frost Moon' },
+        shadow_belt: { dayLength: 300000, nightLength: 1200000, baseTemp: -30, name: 'Shadow Belt' },
+        ice_giant: { dayLength: 180000, nightLength: 1320000, baseTemp: -40, name: 'Ice Giant' },
+        space_rock_024: { dayLength: 0, nightLength: Infinity, baseTemp: -50, name: 'Space Rock-024' }
+    }
+};
+
+// ==================== THEMES ====================
+const THEMES = {
+    cold: {
+        '--ui-bg': 'rgba(13, 31, 51, 0.95)',
+        '--ui-border': '#1a4a7a',
+        '--ui-text': '#88ccff',
+        '--ui-accent': '#44aaff',
+        '--ui-button': 'rgba(20, 50, 80, 0.9)',
+        '--ui-highlight': 'rgba(40, 80, 120, 0.9)'
+    },
+    warm: {
+        '--ui-bg': 'rgba(51, 31, 13, 0.95)',
+        '--ui-border': '#7a4a1a',
+        '--ui-text': '#ffcc88',
+        '--ui-accent': '#ffaa44',
+        '--ui-button': 'rgba(80, 50, 20, 0.9)',
+        '--ui-highlight': 'rgba(120, 80, 40, 0.9)'
+    },
+    green: {
+        '--ui-bg': 'rgba(13, 31, 13, 0.95)',
+        '--ui-border': '#1a5a1a',
+        '--ui-text': '#88ff88',
+        '--ui-accent': '#44ff88',
+        '--ui-button': 'rgba(20, 50, 20, 0.9)',
+        '--ui-highlight': 'rgba(40, 80, 40, 0.9)'
+    },
+    contrast: {
+        '--ui-bg': 'rgba(0, 0, 0, 0.95)',
+        '--ui-border': '#ffffff',
+        '--ui-text': '#ffffff',
+        '--ui-accent': '#ffff00',
+        '--ui-button': 'rgba(30, 30, 30, 0.9)',
+        '--ui-highlight': 'rgba(60, 60, 60, 0.9)'
+    }
+};
+
+// ==================== GAME STATE ====================
+let game = {
+    running: false,
+    paused: false,
+    theme: 'cold',
+    cheatsEnabled: false,
+    cheatsActive: {
+        freeCrafting: false,
+        noDeath: false,
+        rocketLauncher: false
+    },
+    cheatBuffer: '',
+
+    // Time
+    dayTime: 0,
+    isDay: true,
+    planet: 'terra_prime',
+
+    // Camera
+    camera: {
+        x: 0,
+        y: 0,
+        zoom: 1,
+        following: true
+    },
+
+    // Robot
+    robot: {
+        x: 256,
+        y: 256,
+        vx: 0,
+        vy: 0,
+        battery: 100,
+        maxBattery: 100,
+        temperature: 20,
+        hp: 100,
+        maxHp: 100,
+        frozen: false,
+        inventory: [],
+        heldItem: null
+    },
+
+    // World
+    tiles: [],
+    machines: [],
+    resources: [],
+    npcs: [],
+    explored: [],
+    particles: [],
+
+    // Stats
+    credits: 100,
+    stats: {
+        playtime: 0,
+        machinesBuilt: 0,
+        resourcesMined: 0
+    },
+
+    // Sun Tracker robots (autonomous units)
+    sunTrackers: []
+};
+
+// ==================== RESOURCE TYPES ====================
+const RESOURCES = {
+    iron_ore: { name: 'Iron Ore', color: '#888888', icon: '�ite', price: 2 },
+    copper_ore: { name: 'Copper Ore', color: '#cc7744', icon: '⃝', price: 3 },
+    coal: { name: 'Coal', color: '#333333', icon: '�ite', price: 2 },
+    crystal: { name: 'Crystal', color: '#8888ff', icon: '◇', price: 25 },
+    dark_matter: { name: 'Dark Matter', color: '#8800ff', icon: '◈', price: 100 },
+    quantum_ore: { name: 'Quantum Ore', color: '#00ffff', icon: '✧', price: 200 },
+    iron_ingot: { name: 'Iron Ingot', color: '#aaaaaa', icon: '▬', price: 8 },
+    copper_ingot: { name: 'Copper Ingot', color: '#dd9966', icon: '▬', price: 10 },
+    steel: { name: 'Steel', color: '#cccccc', icon: '▰', price: 20 },
+    circuit: { name: 'Circuit', color: '#44ff44', icon: '⊞', price: 50 },
+    water: { name: 'Water', color: '#4488ff', icon: '💧', price: 5 },
+    super_fuel: { name: 'Super Fuel', color: '#ff00ff', icon: '⚡', price: 500 },
+    cable: { name: 'Cable', color: '#cc8844', icon: '~', price: 5 },
+    pipe_item: { name: 'Pipe', color: '#556677', icon: '═', price: 4 },
+    conveyor_item: { name: 'Conveyor', color: '#666666', icon: '→', price: 8 },
+    heat_sink_item: { name: 'Heat Sink', color: '#7788aa', icon: '≋', price: 30 },
+    solar_panel_item: { name: 'Solar Panel', color: '#4488cc', icon: '☀', price: 75 },
+    battery_item: { name: 'Battery', color: '#44aa44', icon: '🔋', price: 40 },
+    engine_part: { name: 'Engine Part', color: '#888899', icon: '⚙', price: 80 },
+    ore_024: { name: '024 Ore', color: '#ff00ff', icon: '✴', price: 1000 }
+};
+
+// ==================== RECIPES ====================
+const RECIPES = {
+    furnace: [
+        { inputs: { iron_ore: 2 }, output: { iron_ingot: 1 }, time: 5 },
+        { inputs: { copper_ore: 2 }, output: { copper_ingot: 1 }, time: 5 },
+        { inputs: { iron_ingot: 1, coal: 1 }, output: { steel: 1 }, time: 8 }
+    ],
+    assembler: [
+        { inputs: { copper_ingot: 1 }, output: { cable: 5 }, time: 3 },
+        { inputs: { iron_ingot: 2 }, output: { pipe: 3 }, time: 4 },
+        { inputs: { iron_ingot: 1, copper_ingot: 1 }, output: { conveyor: 2 }, time: 5 },
+        { inputs: { copper_ingot: 2, crystal: 1 }, output: { circuit: 1 }, time: 8 },
+        { inputs: { copper_ingot: 4, iron_ingot: 2 }, output: { heat_sink: 1 }, time: 6 },
+        { inputs: { crystal: 2, copper_ingot: 2, steel: 1 }, output: { solar_panel: 1 }, time: 12 },
+        { inputs: { copper_ingot: 2, crystal: 1, iron_ingot: 1 }, output: { battery: 1 }, time: 10 },
+        { inputs: { steel: 3, circuit: 1 }, output: { engine_part: 1 }, time: 15 }
+    ],
+    fuel_refinery: [
+        { inputs: { dark_matter: 2, quantum_ore: 1, coal: 5 }, output: { super_fuel: 1 }, time: 30 }
+    ]
+};
+
+// ==================== MACHINE TYPES ====================
+const MACHINES = {
+    miner: {
+        name: 'Miner',
+        icon: '⛏',
+        color: '#886644',
+        cost: { iron_ingot: 3, copper_ingot: 2 },
+        buyPrice: 50,
+        power: -2,
+        heat: 0,
+        size: 1,
+        description: 'Extracts resources from nodes'
+    },
+    water_miner: {
+        name: 'Water Miner',
+        icon: '🚿',
+        color: '#446688',
+        cost: { iron_ingot: 5, copper_ingot: 3 },
+        buyPrice: 80,
+        power: -3,
+        heat: 0,
+        size: 1,
+        description: 'Drills ice for water'
+    },
+    furnace: {
+        name: 'Furnace',
+        icon: '🔥',
+        color: '#884422',
+        cost: { iron_ingot: 5, coal: 3 },
+        buyPrice: 80,
+        power: -4,
+        heat: 5,
+        size: 1,
+        description: 'Smelts ore into ingots'
+    },
+    assembler: {
+        name: 'Assembler',
+        icon: '⚙',
+        color: '#448844',
+        cost: { steel: 5, circuit: 2 },
+        buyPrice: 150,
+        power: -5,
+        heat: 2,
+        size: 1,
+        description: 'Crafts advanced parts'
+    },
+    solar_panel: {
+        name: 'Solar Panel',
+        icon: '☀',
+        color: '#4488cc',
+        cost: { copper_ingot: 3, crystal: 1 },
+        buyPrice: 100,
+        power: 10,
+        heat: 0,
+        size: 1,
+        description: 'Generates power during day'
+    },
+    generator: {
+        name: 'Generator',
+        icon: '⚡',
+        color: '#888844',
+        cost: { steel: 3, copper_ingot: 2 },
+        buyPrice: 120,
+        power: 15,
+        heat: 8,
+        size: 1,
+        description: 'Burns fuel for power'
+    },
+    battery: {
+        name: 'Battery',
+        icon: '🔋',
+        color: '#44aa44',
+        cost: { copper_ingot: 2, iron_ingot: 2 },
+        buyPrice: 60,
+        power: 0,
+        heat: 0,
+        size: 1,
+        capacity: 100,
+        description: 'Stores excess power'
+    },
+    heater: {
+        name: 'Heater',
+        icon: '♨',
+        color: '#cc4422',
+        cost: { iron_ingot: 3, copper_ingot: 2 },
+        buyPrice: 40,
+        power: -3,
+        heat: 20,
+        fireRisk: true,
+        size: 1,
+        description: 'Warms nearby machines. Fire risk!'
+    },
+    heat_lamp: {
+        name: 'Heat Lamp',
+        icon: '💡',
+        color: '#ccaa44',
+        cost: { copper_ingot: 2, iron_ingot: 1 },
+        buyPrice: 30,
+        power: -1,
+        heat: 8,
+        size: 1,
+        description: 'Weak but safe heat source'
+    },
+    heat_sink: {
+        name: 'Heat Sink',
+        icon: '≋',
+        color: '#666688',
+        cost: { copper_ingot: 4, iron_ingot: 2 },
+        buyPrice: 50,
+        power: 0,
+        heat: -10,
+        size: 1,
+        description: 'Absorbs excess heat'
+    },
+    fan: {
+        name: 'Fan',
+        icon: '❊',
+        color: '#88aacc',
+        cost: { iron_ingot: 2, copper_ingot: 2 },
+        buyPrice: 45,
+        power: -2,
+        heat: -15,
+        size: 1,
+        description: 'Active cooling'
+    },
+    conveyor: {
+        name: 'Conveyor',
+        icon: '→',
+        color: '#666666',
+        cost: { iron_ingot: 1, copper_ingot: 1 },
+        buyPrice: 15,
+        power: -0.5,
+        heat: 0,
+        size: 1,
+        description: 'Moves items between machines'
+    },
+    pipe: {
+        name: 'Pipe',
+        icon: '═',
+        color: '#445566',
+        cost: { iron_ingot: 2 },
+        buyPrice: 10,
+        power: 0,
+        heat: 0,
+        size: 1,
+        description: 'Moves liquids/snow'
+    },
+    storage: {
+        name: 'Storage Crate',
+        icon: '📦',
+        color: '#886644',
+        cost: { iron_ingot: 4 },
+        buyPrice: 25,
+        power: 0,
+        heat: 0,
+        size: 1,
+        capacity: 32,
+        description: 'Stores items'
+    },
+    extinguisher: {
+        name: 'Fire Extinguisher',
+        icon: '🧯',
+        color: '#cc2222',
+        cost: { steel: 3, copper_ingot: 2 },
+        buyPrice: 75,
+        power: -1,
+        heat: 0,
+        range: 5,
+        size: 1,
+        description: 'Auto-suppresses fires'
+    },
+    light: {
+        name: 'Light',
+        icon: '✦',
+        color: '#ffffaa',
+        cost: { copper_ingot: 1, iron_ingot: 1 },
+        buyPrice: 20,
+        power: -0.5,
+        heat: 1,
+        size: 1,
+        description: 'Illuminates area at night'
+    },
+    landing_pad: {
+        name: 'Landing Pad',
+        icon: '🚀',
+        color: '#666688',
+        cost: { steel: 10, circuit: 5 },
+        buyPrice: 500,
+        power: -5,
+        heat: 0,
+        size: 2,
+        description: 'Travel between planets'
+    },
+    repair_robot: {
+        name: 'Repair Robot',
+        icon: '🤖',
+        color: '#88aa88',
+        cost: { steel: 4, circuit: 2 },
+        buyPrice: 200,
+        power: -2,
+        heat: 0,
+        size: 1,
+        description: 'Auto-repairs damaged machines'
+    },
+    battery_bank: {
+        name: 'Battery Bank',
+        icon: '🔌',
+        color: '#44aa66',
+        cost: { steel: 5, copper_ingot: 4, circuit: 2 },
+        buyPrice: 180,
+        power: 0,
+        heat: 0,
+        size: 1,
+        capacity: 500,
+        description: 'Stores batteries, Sun Trackers deposit here'
+    },
+    sun_tracker: {
+        name: 'Sun Tracker',
+        icon: '☀️',
+        color: '#ffcc44',
+        cost: { steel: 5, circuit: 3, solar_panel_item: 2 },
+        buyPrice: 300,
+        power: 0,
+        heat: 0,
+        size: 1,
+        description: 'Autonomous robot that collects solar power'
+    },
+    fuel_refinery: {
+        name: 'Fuel Refinery',
+        icon: '⚗',
+        color: '#884488',
+        cost: { steel: 8, circuit: 4, engine_part: 2 },
+        buyPrice: 400,
+        power: -8,
+        heat: 10,
+        size: 1,
+        description: 'Creates super fuel for planet travel'
+    }
+};
+
+// ==================== CANVAS SETUP ====================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const minimapCanvas = document.getElementById('minimapCanvas');
+const minimapCtx = minimapCanvas.getContext('2d');
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    minimapCanvas.width = 150;
+    minimapCanvas.height = 150;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ==================== THEME SELECTION ====================
+function selectTheme(theme) {
+    game.theme = theme;
+    applyTheme(theme);
+    document.getElementById('themeModal').style.display = 'none';
+    document.getElementById('ui').style.display = 'block';
+    startGame();
+}
+
+function applyTheme(theme) {
+    const themeVars = THEMES[theme];
+    for (const [key, value] of Object.entries(themeVars)) {
+        document.documentElement.style.setProperty(key, value);
+    }
+}
+
+// ==================== ISOMETRIC HELPERS ====================
+function worldToScreen(x, y) {
+    const isoX = (x - y) * (CONFIG.TILE_WIDTH / 2);
+    const isoY = (x + y) * (CONFIG.TILE_HEIGHT / 2);
+
+    const screenX = (isoX - game.camera.x) * game.camera.zoom + canvas.width / 2;
+    const screenY = (isoY - game.camera.y) * game.camera.zoom + canvas.height / 2;
+
+    return { x: screenX, y: screenY };
+}
+
+function screenToWorld(screenX, screenY) {
+    const isoX = (screenX - canvas.width / 2) / game.camera.zoom + game.camera.x;
+    const isoY = (screenY - canvas.height / 2) / game.camera.zoom + game.camera.y;
+
+    const x = (isoX / (CONFIG.TILE_WIDTH / 2) + isoY / (CONFIG.TILE_HEIGHT / 2)) / 2;
+    const y = (isoY / (CONFIG.TILE_HEIGHT / 2) - isoX / (CONFIG.TILE_WIDTH / 2)) / 2;
+
+    return { x: Math.floor(x), y: Math.floor(y) };
+}
+
+function wrapCoord(val) {
+    return ((val % CONFIG.MAP_SIZE) + CONFIG.MAP_SIZE) % CONFIG.MAP_SIZE;
+}
+
+// ==================== WORLD GENERATION ====================
+function generateWorld() {
+    // Initialize tiles
+    game.tiles = [];
+    game.explored = [];
+
+    for (let y = 0; y < CONFIG.MAP_SIZE; y++) {
+        game.tiles[y] = [];
+        game.explored[y] = [];
+        for (let x = 0; x < CONFIG.MAP_SIZE; x++) {
+            // Basic terrain generation using simple noise
+            const noise = Math.sin(x * 0.1) * Math.cos(y * 0.1) +
+                         Math.sin(x * 0.05 + y * 0.05) * 0.5;
+
+            let type = 'snow';
+            if (noise > 0.3) type = 'ice';
+            if (noise < -0.5) type = 'rock';
+
+            game.tiles[y][x] = {
+                type: type,
+                temperature: CONFIG.PLANETS[game.planet].baseTemp
+            };
+            game.explored[y][x] = false;
+        }
+    }
+
+    // Generate resource nodes
+    game.resources = [];
+    const nodeCount = Math.floor(CONFIG.MAP_SIZE * CONFIG.MAP_SIZE * 0.002);
+
+    for (let i = 0; i < nodeCount; i++) {
+        const x = Math.floor(Math.random() * CONFIG.MAP_SIZE);
+        const y = Math.floor(Math.random() * CONFIG.MAP_SIZE);
+
+        // Determine resource type based on planet
+        let resourceType = 'iron_ore';
+        const roll = Math.random();
+
+        if (roll < 0.4) resourceType = 'iron_ore';
+        else if (roll < 0.7) resourceType = 'copper_ore';
+        else if (roll < 0.9) resourceType = 'coal';
+        else if (game.planet !== 'terra_prime' && roll < 0.95) resourceType = 'crystal';
+
+        game.resources.push({
+            x: x,
+            y: y,
+            type: resourceType,
+            amount: 50 + Math.floor(Math.random() * 100)
+        });
+    }
+
+    // Generate NPCs
+    game.npcs = [
+        {
+            type: 'scrap_dealer',
+            name: 'Scrap Dealer',
+            x: 260,
+            y: 260,
+            icon: '🧔',
+            buys: ['iron_ore', 'copper_ore', 'coal'],
+            sells: ['miner', 'furnace', 'heater', 'solar_panel']
+        },
+        {
+            type: 'parts_merchant',
+            name: 'Parts Merchant',
+            x: 270,
+            y: 250,
+            icon: '👨‍🔧',
+            buys: ['iron_ingot', 'copper_ingot', 'steel', 'circuit'],
+            sells: ['assembler', 'battery', 'conveyor', 'storage']
+        },
+        {
+            type: 'collector',
+            name: 'Collector',
+            x: 240,
+            y: 270,
+            icon: '🎩',
+            buys: ['crystal', 'dark_matter', 'quantum_ore'],
+            sells: ['landing_pad', 'repair_robot', 'extinguisher']
+        }
+    ];
+
+    // Place tutorial loadout near spawn
+    setupTutorialLoadout();
+}
+
+function setupTutorialLoadout() {
+    const spawnX = 256;
+    const spawnY = 256;
+
+    // Find nearest iron node or create one
+    let ironNode = game.resources.find(r =>
+        r.type === 'iron_ore' &&
+        Math.abs(r.x - spawnX) < 10 &&
+        Math.abs(r.y - spawnY) < 10
+    );
+
+    if (!ironNode) {
+        ironNode = { x: spawnX + 2, y: spawnY + 2, type: 'iron_ore', amount: 100 };
+        game.resources.push(ironNode);
+    }
+
+    // Place miner on node
+    game.machines.push(createMachine('miner', ironNode.x, ironNode.y));
+
+    // Place solar panel nearby
+    game.machines.push(createMachine('solar_panel', spawnX + 3, spawnY + 1));
+
+    // Place heater
+    game.machines.push(createMachine('heater', spawnX + 2, spawnY + 1));
+
+    // Place storage
+    const storage = createMachine('storage', spawnX + 1, spawnY + 3);
+    storage.inventory = [
+        { type: 'iron_ore', count: 5 },
+        { type: 'coal', count: 3 }
+    ];
+    game.machines.push(storage);
+
+    // Place battery
+    const batt = createMachine('battery', spawnX + 4, spawnY + 1);
+    batt.stored = 50;
+    game.machines.push(batt);
+
+    // Explore area around spawn
+    for (let dy = -8; dy <= 8; dy++) {
+        for (let dx = -8; dx <= 8; dx++) {
+            const ex = wrapCoord(spawnX + dx);
+            const ey = wrapCoord(spawnY + dy);
+            game.explored[ey][ex] = true;
+        }
+    }
+
+    // Give robot some starting items
+    game.robot.inventory = [
+        { type: 'iron_ore', count: 3 },
+        { type: 'copper_ore', count: 2 }
+    ];
+}
+
+function createMachine(type, x, y) {
+    const def = MACHINES[type];
+    return {
+        type: type,
+        x: x,
+        y: y,
+        hp: 100,
+        maxHp: 100,
+        temperature: 20,
+        powered: false,
+        active: false,
+        inventory: [],
+        stored: 0,
+        rotation: 0,
+        onTime: 0,
+        onFire: false,
+        fireTimer: 0
+    };
+}
+
+// ==================== INPUT HANDLING ====================
+const keys = {};
+let mouseX = 0, mouseY = 0;
+let mouseDown = false;
+let middleMouseDown = false;
+let lastMouseX = 0, lastMouseY = 0;
+let selectedBuild = null;
+let buildRotation = 0;
+
+document.addEventListener('keydown', (e) => {
+    keys[e.key.toLowerCase()] = true;
+
+    // Cheat code detection
+    game.cheatBuffer += e.key.toLowerCase();
+    if (game.cheatBuffer.length > 10) {
+        game.cheatBuffer = game.cheatBuffer.slice(-10);
+    }
+    if (game.cheatBuffer.includes('levitysm')) {
+        game.cheatsEnabled = true;
+        game.cheatBuffer = '';
+        document.getElementById('cheatMenu').style.display = 'block';
+        notify('Cheat menu activated!', 'warning');
+    }
+
+    // Key bindings
+    if (e.key === ' ') {
+        e.preventDefault();
+        togglePause();
+    }
+    if (e.key.toLowerCase() === 'i') {
+        toggleInventory();
+    }
+    if (e.key.toLowerCase() === 'f') {
+        game.camera.following = !game.camera.following;
+        notify(game.camera.following ? 'Camera following robot' : 'Camera free');
+    }
+    if (e.key.toLowerCase() === 'r' && selectedBuild) {
+        buildRotation = (buildRotation + 1) % 4;
+    }
+    if (e.key === 'Tab') {
+        e.preventDefault();
+    }
+    if (e.key === 'Escape') {
+        selectedBuild = null;
+        document.getElementById('machineMenu').style.display = 'none';
+        closeTradeModal();
+        closeTravelModal();
+    }
+
+    // Rocket launcher mode switching
+    if (game.cheatsActive.rocketLauncher) {
+        if (e.key === '1') {
+            game.rocketMode = 'destroy';
+            notify('Rocket mode: DESTROY');
+        } else if (e.key === '2') {
+            game.rocketMode = 'clear';
+            notify('Rocket mode: CLEAR TERRAIN');
+        } else if (e.key === '3') {
+            game.rocketMode = 'launch';
+            notify('Rocket mode: LAUNCH ROBOT');
+        }
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    keys[e.key.toLowerCase()] = false;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+
+    if (middleMouseDown) {
+        const dx = e.clientX - lastMouseX;
+        const dy = e.clientY - lastMouseY;
+        game.camera.x -= dx / game.camera.zoom;
+        game.camera.y -= dy / game.camera.zoom;
+        game.camera.following = false;
+    }
+
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+});
+
+canvas.addEventListener('mousedown', (e) => {
+    if (e.button === 0) {
+        mouseDown = true;
+        handleLeftClick(e);
+    } else if (e.button === 1) {
+        middleMouseDown = true;
+        e.preventDefault();
+    } else if (e.button === 2) {
+        handleRightClick(e);
+    }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+    if (e.button === 0) mouseDown = false;
+    if (e.button === 1) middleMouseDown = false;
+});
+
+canvas.addEventListener('wheel', (e) => {
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    game.camera.zoom = Math.max(0.25, Math.min(3, game.camera.zoom * zoomFactor));
+    e.preventDefault();
+});
+
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+function handleLeftClick(e) {
+    const worldPos = screenToWorld(e.clientX, e.clientY);
+    const wx = wrapCoord(worldPos.x);
+    const wy = wrapCoord(worldPos.y);
+
+    // Rocket launcher takes priority
+    if (game.cheatsActive.rocketLauncher) {
+        fireRocket(worldPos.x, worldPos.y);
+        return;
+    }
+
+    if (selectedBuild) {
+        // Place building
+        placeMachine(selectedBuild, wx, wy);
+    } else {
+        // Check for machine interaction
+        const machine = getMachineAt(wx, wy);
+        if (machine) {
+            showMachineInfo(machine);
+        } else {
+            // Check for NPC
+            const npc = game.npcs.find(n => n.x === wx && n.y === wy);
+            if (npc) {
+                interactWithNPC(npc);
+            } else {
+                // Check for resource pickup
+                const resource = game.resources.find(r => r.x === wx && r.y === wy);
+                if (resource && isAdjacent(game.robot.x, game.robot.y, wx, wy)) {
+                    mineResource(resource);
+                }
+            }
+        }
+    }
+}
+
+function handleRightClick(e) {
+    if (selectedBuild) {
+        selectedBuild = null;
+    } else {
+        const worldPos = screenToWorld(e.clientX, e.clientY);
+        const wx = wrapCoord(worldPos.x);
+        const wy = wrapCoord(worldPos.y);
+
+        const machine = getMachineAt(wx, wy);
+        if (machine) {
+            showMachineMenu(machine, e.clientX, e.clientY);
+        }
+    }
+}
+
+function getMachineAt(x, y) {
+    return game.machines.find(m => m.x === x && m.y === y);
+}
+
+function isAdjacent(x1, y1, x2, y2) {
+    const dx = Math.abs(x1 - x2);
+    const dy = Math.abs(y1 - y2);
+    return dx <= 2 && dy <= 2;
+}
+
+// ==================== BUILD MENU ====================
+function initBuildMenu() {
+    const menu = document.getElementById('buildMenu');
+    menu.innerHTML = '';
+
+    for (const [key, machine] of Object.entries(MACHINES)) {
+        const item = document.createElement('div');
+        item.className = 'build-item';
+        item.innerHTML = machine.icon;
+        item.title = machine.name;
+        item.onclick = () => selectBuild(key);
+        menu.appendChild(item);
+    }
+}
+
+function selectBuild(type) {
+    selectedBuild = type;
+    document.querySelectorAll('.build-item').forEach(el => el.classList.remove('selected'));
+    event.target.classList.add('selected');
+}
+
+function placeMachine(type, x, y) {
+    // Check if we can afford it
+    const def = MACHINES[type];
+
+    if (!game.cheatsActive.freeCrafting) {
+        // Check inventory for materials
+        for (const [resource, count] of Object.entries(def.cost)) {
+            const item = game.robot.inventory.find(i => i.type === resource);
+            if (!item || item.count < count) {
+                notify(`Need ${count} ${RESOURCES[resource]?.name || resource}`, 'warning');
+                return;
+            }
+        }
+
+        // Deduct materials
+        for (const [resource, count] of Object.entries(def.cost)) {
+            const item = game.robot.inventory.find(i => i.type === resource);
+            item.count -= count;
+            if (item.count <= 0) {
+                game.robot.inventory = game.robot.inventory.filter(i => i.count > 0);
+            }
+        }
+    }
+
+    // Check if tile is free
+    if (getMachineAt(x, y)) {
+        notify('Tile occupied!', 'warning');
+        return;
+    }
+
+    // Place machine
+    const machine = createMachine(type, x, y);
+    machine.rotation = buildRotation;
+    game.machines.push(machine);
+    game.stats.machinesBuilt++;
+
+    // Special handling for sun_tracker - spawn a tracker robot
+    if (type === 'sun_tracker') {
+        // Find nearby battery bank
+        const nearbyBank = game.machines.find(m =>
+            m.type === 'battery_bank' &&
+            Math.abs(m.x - x) < 5 &&
+            Math.abs(m.y - y) < 5
+        );
+
+        if (nearbyBank) {
+            spawnSunTracker(nearbyBank);
+        } else {
+            notify('Place near a Battery Bank for best results!', 'warning');
+            // Still spawn but use this machine's location
+            spawnSunTracker(machine);
+        }
+    }
+
+    notify(`Placed ${def.name}`);
+}
+
+// ==================== ROBOT MOVEMENT ====================
+function updateRobot(dt) {
+    if (game.robot.frozen) {
+        // Check for rescue (sun thawing)
+        if (game.isDay) {
+            game.robot.temperature += 5 * dt;
+            if (game.robot.temperature > 0) {
+                game.robot.frozen = false;
+                game.robot.battery = 10;
+                notify('Robot thawed by sunlight!');
+            }
+        }
+        return;
+    }
+
+    // Movement
+    let dx = 0, dy = 0;
+    const speed = 3;
+
+    if (keys['w']) { dx -= 1; dy -= 1; }
+    if (keys['s']) { dx += 1; dy += 1; }
+    if (keys['a']) { dx -= 1; dy += 1; }
+    if (keys['d']) { dx += 1; dy -= 1; }
+
+    if (dx !== 0 || dy !== 0) {
+        const len = Math.sqrt(dx * dx + dy * dy);
+        dx /= len;
+        dy /= len;
+
+        game.robot.x += dx * speed * dt;
+        game.robot.y += dy * speed * dt;
+
+        // Wrap around
+        game.robot.x = wrapCoord(game.robot.x);
+        game.robot.y = wrapCoord(game.robot.y);
+
+        // Battery drain while moving
+        game.robot.battery -= 0.1 * dt;
+    }
+
+    // Explore tiles around robot
+    const rx = Math.floor(game.robot.x);
+    const ry = Math.floor(game.robot.y);
+    for (let dy = -5; dy <= 5; dy++) {
+        for (let dx = -5; dx <= 5; dx++) {
+            const ex = wrapCoord(rx + dx);
+            const ey = wrapCoord(ry + dy);
+            game.explored[ey][ex] = true;
+        }
+    }
+
+    // Temperature management
+    let heatGain = 0;
+
+    // Sun heat
+    if (game.isDay) heatGain += 30;
+
+    // Nearby heaters
+    game.machines.forEach(m => {
+        if (m.type === 'heater' && m.powered && !m.onFire) {
+            const dist = Math.sqrt(Math.pow(m.x - game.robot.x, 2) + Math.pow(m.y - game.robot.y, 2));
+            if (dist < 5) {
+                heatGain += 20 / (dist + 1);
+            }
+        }
+    });
+
+    // Planet base temp
+    const planetBase = CONFIG.PLANETS[game.planet].baseTemp;
+    const targetTemp = planetBase + heatGain;
+
+    game.robot.temperature += (targetTemp - game.robot.temperature) * 0.1 * dt;
+
+    // Battery drain from internal heater
+    if (game.robot.temperature < 10) {
+        game.robot.battery -= 0.5 * dt;
+    }
+
+    // Freeze check
+    if (game.robot.battery <= 0 && !game.cheatsActive.noDeath) {
+        game.robot.battery = 0;
+        game.robot.frozen = true;
+        notify('Robot frozen! Waiting for rescue...', 'danger');
+    }
+
+    // Camera follow
+    if (game.camera.following) {
+        const targetCamX = (game.robot.x - game.robot.y) * (CONFIG.TILE_WIDTH / 2);
+        const targetCamY = (game.robot.x + game.robot.y) * (CONFIG.TILE_HEIGHT / 2);
+        game.camera.x += (targetCamX - game.camera.x) * 0.1;
+        game.camera.y += (targetCamY - game.camera.y) * 0.1;
+    }
+}
+
+// ==================== MACHINE UPDATES ====================
+function updateMachines(dt) {
+    // Calculate total power
+    let powerGen = 0;
+    let powerUse = 0;
+    let batteryStored = 0;
+
+    game.machines.forEach(m => {
+        const def = MACHINES[m.type];
+        if (!def) return;
+
+        if (def.power > 0) {
+            // Generator
+            if (m.type === 'solar_panel' && game.isDay) {
+                powerGen += def.power;
+            } else if (m.type === 'generator') {
+                // Check for fuel in inventory
+                const fuel = m.inventory.find(i => i.type === 'coal');
+                if (fuel && fuel.count > 0) {
+                    powerGen += def.power;
+                    // Consume fuel slowly
+                    if (Math.random() < dt * 0.033) { // ~1 coal per 30 sec
+                        fuel.count--;
+                        if (fuel.count <= 0) {
+                            m.inventory = m.inventory.filter(i => i.count > 0);
+                        }
+                    }
+                }
+            }
+        } else if (def.power < 0) {
+            powerUse += Math.abs(def.power);
+        }
+
+        // Battery and battery bank contribute stored power
+        if ((m.type === 'battery' || m.type === 'battery_bank') && m.stored > 0) {
+            batteryStored += m.stored;
+        }
+    });
+
+    // Determine if we have enough power
+    let powerDeficit = powerUse - powerGen;
+    let hasPower = true;
+
+    if (powerDeficit > 0) {
+        // Draw from batteries
+        const drainRate = powerDeficit * dt;
+        game.machines.forEach(m => {
+            if ((m.type === 'battery' || m.type === 'battery_bank') && m.stored > 0 && powerDeficit > 0) {
+                const drain = Math.min(m.stored, drainRate);
+                m.stored -= drain;
+                powerDeficit -= drain / dt;
+            }
+        });
+
+        hasPower = powerDeficit <= 0;
+    } else if (powerGen > powerUse) {
+        // Charge batteries
+        const chargeRate = (powerGen - powerUse) * dt;
+        game.machines.forEach(m => {
+            if (m.type === 'battery' || m.type === 'battery_bank') {
+                const def = MACHINES[m.type];
+                const capacity = def.capacity || 100;
+                if (m.stored < capacity) {
+                    m.stored = Math.min(capacity, (m.stored || 0) + chargeRate * 0.5);
+                }
+            }
+        });
+    }
+
+    // Update each machine
+    game.machines.forEach(m => {
+        const def = MACHINES[m.type];
+        if (!def) return;
+
+        m.powered = hasPower;
+
+        // Temperature
+        let heatGain = def.heat;
+        if (game.isDay) heatGain += 15;
+
+        // Nearby heaters/coolers
+        game.machines.forEach(other => {
+            if (other === m) return;
+            const dist = Math.sqrt(Math.pow(other.x - m.x, 2) + Math.pow(other.y - m.y, 2));
+            if (dist < 4) {
+                const otherDef = MACHINES[other.type];
+                if (otherDef && other.powered) {
+                    heatGain += otherDef.heat / (dist + 1);
+                }
+            }
+        });
+
+        const planetBase = CONFIG.PLANETS[game.planet].baseTemp;
+        const targetTemp = planetBase + heatGain;
+        m.temperature += (targetTemp - m.temperature) * 0.05 * dt;
+
+        // Temperature states
+        if (m.temperature < -20) {
+            // Frozen
+            m.active = false;
+            if (m.temperature < -30) {
+                m.hp -= 0.1 * dt; // Freeze damage
+            }
+        } else if (m.temperature < 0) {
+            // Cold - 50% efficiency
+            m.active = m.powered;
+        } else if (m.temperature > 80) {
+            // Overheating
+            if (def.fireRisk) {
+                m.onTime += dt;
+                if (m.onTime > 60 && Math.random() < 0.01 * dt) {
+                    m.onFire = true;
+                    notify(`${def.name} caught fire!`, 'danger');
+                }
+            }
+        } else {
+            m.active = m.powered;
+            m.onTime = 0;
+        }
+
+        // Fire spreading
+        if (m.onFire) {
+            m.hp -= 10 * dt;
+            m.fireTimer += dt;
+
+            if (m.fireTimer >= 5) {
+                m.fireTimer = 0;
+                // Spread to adjacent
+                game.machines.forEach(other => {
+                    if (other.onFire) return;
+                    const dist = Math.sqrt(Math.pow(other.x - m.x, 2) + Math.pow(other.y - m.y, 2));
+                    if (dist <= 1.5 && Math.random() < 0.5) {
+                        other.onFire = true;
+                        notify('Fire spreading!', 'danger');
+                    }
+                });
+            }
+
+            // Check for extinguisher
+            game.machines.forEach(ext => {
+                if (ext.type === 'extinguisher' && ext.powered) {
+                    const dist = Math.sqrt(Math.pow(ext.x - m.x, 2) + Math.pow(ext.y - m.y, 2));
+                    if (dist <= 5) {
+                        m.onFire = false;
+                        m.fireTimer = 0;
+                    }
+                }
+            });
+        }
+
+        // Destruction
+        if (m.hp <= 0) {
+            notify(`${def.name} destroyed!`, 'danger');
+            game.machines = game.machines.filter(mm => mm !== m);
+            // Create explosion particles
+            for (let i = 0; i < 10; i++) {
+                game.particles.push({
+                    x: m.x,
+                    y: m.y,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: (Math.random() - 0.5) * 5,
+                    life: 1,
+                    color: '#ff4400'
+                });
+            }
+        }
+
+        // Mining
+        if (m.type === 'miner' && m.active) {
+            const node = game.resources.find(r => r.x === m.x && r.y === m.y);
+            if (node && node.amount > 0) {
+                node.amount -= dt * 0.5;
+                // Output to storage or conveyor
+                if (Math.random() < dt * 0.2) {
+                    addToMachineInventory(m, node.type, 1);
+                }
+            }
+        }
+
+        // Water mining
+        if (m.type === 'water_miner' && m.active) {
+            if (game.tiles[wrapCoord(m.y)][wrapCoord(m.x)].type === 'ice') {
+                if (Math.random() < dt * 0.15) {
+                    addToMachineInventory(m, 'water', 1);
+                }
+            }
+        }
+
+        // Processing machines (furnace, assembler, fuel_refinery)
+        if (['furnace', 'assembler', 'fuel_refinery'].includes(m.type) && m.active) {
+            const recipes = RECIPES[m.type] || [];
+
+            // Initialize processing state if needed
+            if (!m.processing) m.processing = null;
+            if (!m.processTime) m.processTime = 0;
+
+            if (m.processing) {
+                // Continue processing current recipe
+                m.processTime += dt;
+                if (m.processTime >= m.processing.time) {
+                    // Output finished product
+                    for (const [item, count] of Object.entries(m.processing.output)) {
+                        addToMachineInventory(m, item, count);
+                    }
+                    m.processing = null;
+                    m.processTime = 0;
+                }
+            } else {
+                // Try to start a new recipe
+                for (const recipe of recipes) {
+                    let canCraft = true;
+                    for (const [item, count] of Object.entries(recipe.inputs)) {
+                        const inv = m.inventory.find(i => i.type === item);
+                        if (!inv || inv.count < count) {
+                            canCraft = false;
+                            break;
+                        }
+                    }
+
+                    if (canCraft) {
+                        // Consume inputs
+                        for (const [item, count] of Object.entries(recipe.inputs)) {
+                            const inv = m.inventory.find(i => i.type === item);
+                            inv.count -= count;
+                            if (inv.count <= 0) {
+                                m.inventory = m.inventory.filter(i => i.count > 0);
+                            }
+                        }
+                        m.processing = recipe;
+                        m.processTime = 0;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Conveyor belt logic
+        if (m.type === 'conveyor' && m.active && m.inventory.length > 0) {
+            // Find adjacent machine in direction
+            const directions = [
+                { dx: 1, dy: 0 },
+                { dx: 0, dy: 1 },
+                { dx: -1, dy: 0 },
+                { dx: 0, dy: -1 }
+            ];
+            const dir = directions[m.rotation % 4];
+            const targetX = wrapCoord(m.x + dir.dx);
+            const targetY = wrapCoord(m.y + dir.dy);
+            const target = getMachineAt(targetX, targetY);
+
+            if (target && m.inventory.length > 0) {
+                const item = m.inventory[0];
+                addToMachineInventory(target, item.type, 1);
+                item.count--;
+                if (item.count <= 0) {
+                    m.inventory.shift();
+                }
+            }
+        }
+
+        // Repair robot logic
+        if (m.type === 'repair_robot' && m.active) {
+            // Find damaged machine nearby
+            const damaged = game.machines.find(other =>
+                other !== m &&
+                other.hp < other.maxHp &&
+                Math.abs(other.x - m.x) <= 5 &&
+                Math.abs(other.y - m.y) <= 5
+            );
+
+            if (damaged) {
+                damaged.hp = Math.min(damaged.maxHp, damaged.hp + 10 * dt);
+            }
+        }
+
+        // Landing pad - check for interaction
+        if (m.type === 'landing_pad' && m.active) {
+            // Check if player is on pad
+            if (Math.abs(game.robot.x - m.x) < 1.5 && Math.abs(game.robot.y - m.y) < 1.5) {
+                m.playerOnPad = true;
+            } else {
+                m.playerOnPad = false;
+            }
+        }
+    });
+}
+
+function addToMachineInventory(machine, type, count) {
+    const existing = machine.inventory.find(i => i.type === type);
+    if (existing) {
+        existing.count += count;
+    } else {
+        machine.inventory.push({ type, count });
+    }
+}
+
+// ==================== DAY/NIGHT CYCLE ====================
+function updateDayNight(dt) {
+    const planet = CONFIG.PLANETS[game.planet];
+    const cycleLength = planet.dayLength + planet.nightLength;
+
+    if (cycleLength === Infinity) {
+        // Space Rock-024: always night
+        game.isDay = false;
+        game.dayTime = 0;
+        return;
+    }
+
+    game.dayTime += dt * 1000;
+
+    if (game.dayTime >= cycleLength) {
+        game.dayTime = 0;
+    }
+
+    game.isDay = game.dayTime < planet.dayLength;
+
+    // Update UI
+    const progress = game.dayTime / cycleLength;
+    document.getElementById('dayNightFill').style.width = `${progress * 100}%`;
+
+    const timeInPhase = game.isDay ? game.dayTime : game.dayTime - planet.dayLength;
+    const phaseLength = game.isDay ? planet.dayLength : planet.nightLength;
+    const minutes = Math.floor((timeInPhase / phaseLength) * (game.isDay ? 10 : 15));
+    const seconds = Math.floor(((timeInPhase / phaseLength) * (game.isDay ? 10 : 15) % 1) * 60);
+
+    document.getElementById('dayNightText').textContent =
+        `${game.isDay ? 'DAY' : 'NIGHT'} ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+// ==================== RENDERING ====================
+function render() {
+    // Clear
+    ctx.fillStyle = game.isDay ? '#1a2a3a' : '#0a0a12';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Calculate visible range
+    const topLeft = screenToWorld(0, 0);
+    const bottomRight = screenToWorld(canvas.width, canvas.height);
+
+    const startX = Math.floor(topLeft.x) - 5;
+    const endX = Math.ceil(bottomRight.x) + 5;
+    const startY = Math.floor(topLeft.y) - 5;
+    const endY = Math.ceil(bottomRight.y) + 5;
+
+    // Draw tiles
+    for (let y = startY; y <= endY; y++) {
+        for (let x = startX; x <= endX; x++) {
+            const wx = wrapCoord(x);
+            const wy = wrapCoord(y);
+
+            // Fog of war
+            if (!game.explored[wy][wx]) continue;
+
+            const screen = worldToScreen(x, y);
+            const tile = game.tiles[wy][wx];
+
+            // Draw tile
+            drawIsometricTile(screen.x, screen.y, getTileColor(tile.type));
+        }
+    }
+
+    // Draw resources
+    game.resources.forEach(r => {
+        if (!game.explored[wrapCoord(r.y)][wrapCoord(r.x)]) return;
+        if (r.amount <= 0) return;
+
+        const screen = worldToScreen(r.x, r.y);
+        if (screen.x < -50 || screen.x > canvas.width + 50) return;
+        if (screen.y < -50 || screen.y > canvas.height + 50) return;
+
+        const res = RESOURCES[r.type];
+        ctx.fillStyle = res.color;
+        ctx.font = `${20 * game.camera.zoom}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('●', screen.x, screen.y);
+    });
+
+    // Draw machines
+    game.machines.forEach(m => {
+        const screen = worldToScreen(m.x, m.y);
+        if (screen.x < -50 || screen.x > canvas.width + 50) return;
+        if (screen.y < -50 || screen.y > canvas.height + 50) return;
+
+        const def = MACHINES[m.type];
+
+        // Base
+        ctx.fillStyle = m.onFire ? '#ff4400' :
+                       m.temperature < -20 ? '#aaddff' :
+                       m.temperature < 0 ? '#88bbee' :
+                       m.temperature > 80 ? '#ffaa44' : def.color;
+
+        const size = 30 * game.camera.zoom;
+        ctx.fillRect(screen.x - size/2, screen.y - size, size, size);
+
+        // Icon
+        ctx.fillStyle = '#fff';
+        ctx.font = `${16 * game.camera.zoom}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(def.icon, screen.x, screen.y - size/2 + 5);
+
+        // HP bar if damaged
+        if (m.hp < m.maxHp) {
+            const barWidth = 30 * game.camera.zoom;
+            const barHeight = 4 * game.camera.zoom;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(screen.x - barWidth/2, screen.y - size - 8, barWidth, barHeight);
+            ctx.fillStyle = m.hp > 50 ? '#4f4' : m.hp > 25 ? '#ff4' : '#f44';
+            ctx.fillRect(screen.x - barWidth/2, screen.y - size - 8, barWidth * (m.hp / m.maxHp), barHeight);
+        }
+
+        // Fire effect
+        if (m.onFire) {
+            ctx.fillStyle = `rgba(255, ${Math.random() * 100 + 100}, 0, 0.8)`;
+            ctx.beginPath();
+            ctx.arc(screen.x, screen.y - size/2, 15 * game.camera.zoom, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+
+    // Draw NPCs
+    game.npcs.forEach(npc => {
+        if (!game.explored[wrapCoord(npc.y)][wrapCoord(npc.x)]) return;
+
+        const screen = worldToScreen(npc.x, npc.y);
+        if (screen.x < -50 || screen.x > canvas.width + 50) return;
+
+        ctx.font = `${24 * game.camera.zoom}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(npc.icon, screen.x, screen.y);
+
+        ctx.fillStyle = '#fff';
+        ctx.font = `${10 * game.camera.zoom}px Arial`;
+        ctx.fillText(npc.name, screen.x, screen.y + 15 * game.camera.zoom);
+    });
+
+    // Draw Sun Trackers
+    game.sunTrackers.forEach(tracker => {
+        const screen = worldToScreen(tracker.x, tracker.y);
+        if (screen.x < -50 || screen.x > canvas.width + 50) return;
+        if (screen.y < -50 || screen.y > canvas.height + 50) return;
+
+        // Draw the tracker robot
+        ctx.fillStyle = tracker.state === 'collecting' ? '#ffcc00' :
+                       tracker.state === 'returning' ? '#ff9900' : '#888800';
+        ctx.font = `${20 * game.camera.zoom}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('☀️', screen.x, screen.y);
+
+        // Charge indicator
+        if (tracker.charge > 0) {
+            ctx.fillStyle = '#ffff00';
+            ctx.font = `${8 * game.camera.zoom}px Arial`;
+            ctx.fillText(`${Math.floor(tracker.charge)}%`, screen.x, screen.y + 12 * game.camera.zoom);
+        }
+    });
+
+    // Draw robot
+    if (!game.robot.frozen || Math.floor(Date.now() / 500) % 2 === 0) {
+        const robotScreen = worldToScreen(game.robot.x, game.robot.y);
+
+        ctx.fillStyle = game.robot.frozen ? '#88ccff' : '#44ff88';
+        ctx.font = `${28 * game.camera.zoom}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText('🤖', robotScreen.x, robotScreen.y);
+    }
+
+    // Draw particles
+    game.particles.forEach(p => {
+        const screen = worldToScreen(p.x, p.y);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y, 5 * game.camera.zoom, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    // Draw build preview
+    if (selectedBuild) {
+        const worldPos = screenToWorld(mouseX, mouseY);
+        const screen = worldToScreen(Math.floor(worldPos.x), Math.floor(worldPos.y));
+        const def = MACHINES[selectedBuild];
+
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = def.color;
+        const size = 30 * game.camera.zoom;
+        ctx.fillRect(screen.x - size/2, screen.y - size, size, size);
+        ctx.fillStyle = '#fff';
+        ctx.font = `${16 * game.camera.zoom}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.fillText(def.icon, screen.x, screen.y - size/2 + 5);
+        ctx.globalAlpha = 1;
+    }
+
+    // Night overlay
+    if (!game.isDay) {
+        ctx.fillStyle = 'rgba(0, 0, 30, 0.4)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Light sources
+        game.machines.forEach(m => {
+            if (m.type === 'light' && m.powered) {
+                const screen = worldToScreen(m.x, m.y);
+                const gradient = ctx.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, 100 * game.camera.zoom);
+                gradient.addColorStop(0, 'rgba(255, 255, 200, 0.3)');
+                gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(screen.x - 100, screen.y - 100, 200, 200);
+            }
+        });
+    }
+
+    // Render minimap
+    renderMinimap();
+}
+
+function drawIsometricTile(x, y, color) {
+    const w = CONFIG.TILE_WIDTH * game.camera.zoom / 2;
+    const h = CONFIG.TILE_HEIGHT * game.camera.zoom / 2;
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, y - h);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x, y + h);
+    ctx.lineTo(x - w, y);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.stroke();
+}
+
+function getTileColor(type) {
+    switch(type) {
+        case 'snow': return '#ddeeff';
+        case 'ice': return '#aaccee';
+        case 'rock': return '#556677';
+        default: return '#667788';
+    }
+}
+
+function renderMinimap() {
+    minimapCtx.fillStyle = '#111';
+    minimapCtx.fillRect(0, 0, 150, 150);
+
+    const scale = 150 / CONFIG.MAP_SIZE;
+
+    // Draw explored areas
+    minimapCtx.fillStyle = '#335';
+    for (let y = 0; y < CONFIG.MAP_SIZE; y += 8) {
+        for (let x = 0; x < CONFIG.MAP_SIZE; x += 8) {
+            if (game.explored[y][x]) {
+                minimapCtx.fillRect(x * scale, y * scale, 8 * scale, 8 * scale);
+            }
+        }
+    }
+
+    // Draw machines
+    minimapCtx.fillStyle = '#4f4';
+    game.machines.forEach(m => {
+        minimapCtx.fillRect(m.x * scale - 1, m.y * scale - 1, 2, 2);
+    });
+
+    // Draw robot
+    minimapCtx.fillStyle = '#ff0';
+    minimapCtx.fillRect(game.robot.x * scale - 2, game.robot.y * scale - 2, 4, 4);
+}
+
+// ==================== UI UPDATES ====================
+function updateUI() {
+    // Resources
+    const counts = {};
+    game.robot.inventory.forEach(item => {
+        counts[item.type] = (counts[item.type] || 0) + item.count;
+    });
+
+    document.getElementById('res-iron').textContent = counts['iron_ore'] || 0;
+    document.getElementById('res-copper').textContent = counts['copper_ore'] || 0;
+    document.getElementById('res-coal').textContent = counts['coal'] || 0;
+    document.getElementById('res-crystal').textContent = counts['crystal'] || 0;
+    document.getElementById('res-credits').textContent = game.credits;
+
+    // Robot status
+    document.getElementById('batteryPercent').textContent = `${Math.floor(game.robot.battery)}%`;
+    document.getElementById('batteryBar').style.width = `${game.robot.battery}%`;
+    document.getElementById('batteryBar').style.background =
+        game.robot.battery > 50 ? '#4f4' : game.robot.battery > 25 ? '#ff4' : '#f44';
+
+    const tempStatus = game.robot.temperature < -20 ? 'FROZEN' :
+                       game.robot.temperature < 0 ? 'COLD' :
+                       game.robot.temperature > 50 ? 'HOT' : 'OK';
+    document.getElementById('robotTempVal').textContent = tempStatus;
+    document.getElementById('tempBar').style.width = `${Math.min(100, (game.robot.temperature + 30) * 2)}%`;
+
+    document.getElementById('robotHPVal').textContent = `${Math.floor(game.robot.hp)}%`;
+    document.getElementById('hpBar').style.width = `${game.robot.hp}%`;
+
+    // Temperature indicator
+    const planetTemp = CONFIG.PLANETS[game.planet].baseTemp + (game.isDay ? 30 : 0);
+    document.getElementById('tempIndicator').textContent = `🌡️ ${planetTemp}°C`;
+}
+
+// ==================== INVENTORY ====================
+function toggleInventory() {
+    const panel = document.getElementById('inventoryPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+
+    if (panel.style.display === 'block') {
+        renderInventory();
+    }
+}
+
+function renderInventory() {
+    const grid = document.getElementById('inventoryGrid');
+    grid.innerHTML = '';
+
+    for (let i = 0; i < CONFIG.INVENTORY_SIZE; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'inv-slot';
+
+        const item = game.robot.inventory[i];
+        if (item) {
+            const res = RESOURCES[item.type];
+            slot.innerHTML = `<div style="font-size: 20px;">${res?.icon || '?'}</div><div>${item.count}</div>`;
+            slot.title = res?.name || item.type;
+        }
+
+        grid.appendChild(slot);
+    }
+}
+
+// ==================== MACHINE INTERACTION ====================
+function showMachineInfo(machine) {
+    const def = MACHINES[machine.type];
+    const info = document.getElementById('selectedInfo');
+
+    info.innerHTML = `
+        <h4 style="color: var(--ui-accent);">${def.name}</h4>
+        <p style="font-size: 11px; margin: 5px 0;">${def.description}</p>
+        <p style="font-size: 11px;">HP: ${Math.floor(machine.hp)}/${machine.maxHp}</p>
+        <p style="font-size: 11px;">Temp: ${Math.floor(machine.temperature)}°C</p>
+        <p style="font-size: 11px;">Status: ${machine.onFire ? '🔥 ON FIRE' : machine.active ? '✓ Active' : '✗ Inactive'}</p>
+        ${machine.inventory.length > 0 ? `<p style="font-size: 11px;">Storage: ${machine.inventory.map(i => `${i.count}x ${i.type}`).join(', ')}</p>` : ''}
+    `;
+}
+
+function showMachineMenu(machine, x, y) {
+    const menu = document.getElementById('machineMenu');
+    const def = MACHINES[machine.type];
+    const idx = game.machines.indexOf(machine);
+
+    let html = `
+        <h3>${def.name}</h3>
+        <div class="machine-stat">HP: ${Math.floor(machine.hp)}/${machine.maxHp}</div>
+        <div class="machine-stat">Temperature: ${Math.floor(machine.temperature)}°C</div>
+        <div class="machine-stat">Status: ${machine.onFire ? '🔥 ON FIRE' : machine.active ? '✓ Active' : '✗ Inactive'}</div>
+    `;
+
+    // Show processing progress for processing machines
+    if (machine.processing) {
+        const progress = (machine.processTime / machine.processing.time * 100).toFixed(0);
+        html += `<div class="machine-stat">Processing: ${progress}%</div>`;
+    }
+
+    // Show inventory
+    if (machine.inventory.length > 0) {
+        html += `<div class="machine-stat">Contents:</div>`;
+        machine.inventory.forEach(item => {
+            const res = RESOURCES[item.type];
+            html += `<div class="machine-stat" style="margin-left: 10px;">
+                ${res?.icon || '?'} ${res?.name || item.type}: ${item.count}
+                <span style="color: var(--ui-accent); cursor: pointer;" onclick="takeFromMachine(${idx}, '${item.type}', 1)">[Take]</span>
+            </div>`;
+        });
+    }
+
+    // Add items button for processing machines
+    if (['furnace', 'assembler', 'fuel_refinery', 'storage'].includes(machine.type)) {
+        html += `<button class="pause-btn" onclick="openTransferMenu(${idx})">Add Items</button>`;
+    }
+
+    // Special buttons
+    if (machine.type === 'landing_pad') {
+        html += `<button class="pause-btn" onclick="closeMachineMenu(); openTravelModal();">🚀 Travel</button>`;
+    }
+
+    html += `
+        <button class="pause-btn" onclick="pickupMachine(${idx})">Pick Up</button>
+        <button class="pause-btn" onclick="closeMachineMenu()">Close</button>
+    `;
+
+    menu.innerHTML = html;
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    menu.style.display = 'block';
+}
+
+function takeFromMachine(machineIdx, type, count) {
+    const machine = game.machines[machineIdx];
+    if (!machine) return;
+
+    const item = machine.inventory.find(i => i.type === type);
+    if (!item || item.count < count) return;
+
+    item.count -= count;
+    if (item.count <= 0) {
+        machine.inventory = machine.inventory.filter(i => i.count > 0);
+    }
+
+    addToInventory(type, count);
+    notify(`Took ${count} ${RESOURCES[type]?.name || type}`);
+
+    // Refresh menu
+    const menuPos = document.getElementById('machineMenu');
+    showMachineMenu(machine, parseInt(menuPos.style.left), parseInt(menuPos.style.top));
+}
+
+function openTransferMenu(machineIdx) {
+    const machine = game.machines[machineIdx];
+    if (!machine) return;
+
+    closeMachineMenu();
+
+    const modal = document.getElementById('tradeModal');
+    const title = document.getElementById('tradeTitle');
+    const content = document.getElementById('tradeContent');
+
+    title.textContent = `Transfer to ${MACHINES[machine.type].name}`;
+
+    let html = '<div class="trade-section"><h3>Your Inventory</h3><div class="trade-grid">';
+
+    game.robot.inventory.forEach(item => {
+        const res = RESOURCES[item.type];
+        html += `
+            <div class="trade-item" onclick="transferToMachine(${machineIdx}, '${item.type}', 1)">
+                <div class="icon">${res?.icon || '?'}</div>
+                <div class="name">${res?.name || item.type} (x${item.count})</div>
+                <div class="price">Click to add</div>
+            </div>
+        `;
+    });
+
+    if (game.robot.inventory.length === 0) {
+        html += '<div style="color: var(--ui-text); grid-column: span 3; text-align: center;">Inventory empty</div>';
+    }
+
+    html += '</div></div>';
+    content.innerHTML = html;
+    modal.style.display = 'block';
+}
+
+function transferToMachine(machineIdx, type, count) {
+    const machine = game.machines[machineIdx];
+    if (!machine) return;
+
+    const item = game.robot.inventory.find(i => i.type === type);
+    if (!item || item.count < count) return;
+
+    item.count -= count;
+    if (item.count <= 0) {
+        game.robot.inventory = game.robot.inventory.filter(i => i.count > 0);
+    }
+
+    addToMachineInventory(machine, type, count);
+    notify(`Added ${count} ${RESOURCES[type]?.name || type} to ${MACHINES[machine.type].name}`);
+
+    // Refresh transfer menu
+    openTransferMenu(machineIdx);
+}
+
+function closeMachineMenu() {
+    document.getElementById('machineMenu').style.display = 'none';
+}
+
+function pickupMachine(index) {
+    const machine = game.machines[index];
+    if (!machine) return;
+
+    // Return some materials
+    const def = MACHINES[machine.type];
+    for (const [resource, count] of Object.entries(def.cost)) {
+        addToInventory(resource, Math.floor(count * 0.5));
+    }
+
+    game.machines.splice(index, 1);
+    closeMachineMenu();
+    notify(`Picked up ${def.name}`);
+}
+
+// ==================== RESOURCE GATHERING ====================
+function mineResource(resource) {
+    if (resource.amount <= 0) return;
+
+    const amount = Math.min(5, resource.amount);
+    resource.amount -= amount;
+    addToInventory(resource.type, amount);
+    game.stats.resourcesMined += amount;
+
+    notify(`Gathered ${amount} ${RESOURCES[resource.type].name}`);
+}
+
+function addToInventory(type, count) {
+    const existing = game.robot.inventory.find(i => i.type === type);
+    if (existing) {
+        existing.count += count;
+    } else if (game.robot.inventory.length < CONFIG.INVENTORY_SIZE) {
+        game.robot.inventory.push({ type, count });
+    } else {
+        notify('Inventory full!', 'warning');
+    }
+}
+
+// ==================== NPC INTERACTION ====================
+function interactWithNPC(npc) {
+    openTradeModal(npc);
+}
+
+function openTradeModal(npc) {
+    const modal = document.getElementById('tradeModal');
+    const title = document.getElementById('tradeTitle');
+    const content = document.getElementById('tradeContent');
+
+    title.textContent = `Trading with ${npc.name}`;
+
+    let html = '';
+
+    // Sell section - what player can sell to NPC
+    html += '<div class="trade-section"><h3>💰 Sell (Your Items)</h3><div class="trade-grid">';
+
+    game.robot.inventory.forEach(item => {
+        if (npc.buys.includes(item.type)) {
+            const res = RESOURCES[item.type];
+            const price = res.price;
+            html += `
+                <div class="trade-item sell" onclick="sellItem('${item.type}', 1)">
+                    <div class="icon">${res.icon || '●'}</div>
+                    <div class="name">${res.name} (x${item.count})</div>
+                    <div class="price">+${price} CR</div>
+                </div>
+            `;
+        }
+    });
+
+    if (!game.robot.inventory.some(i => npc.buys.includes(i.type))) {
+        html += '<div style="color: var(--ui-text); grid-column: span 3; text-align: center;">No items to sell</div>';
+    }
+
+    html += '</div></div>';
+
+    // Buy section - what player can buy from NPC
+    html += '<div class="trade-section"><h3>🛒 Buy (From Merchant)</h3><div class="trade-grid">';
+
+    npc.sells.forEach(machineType => {
+        const machine = MACHINES[machineType];
+        if (machine) {
+            const canAfford = game.credits >= machine.buyPrice;
+            html += `
+                <div class="trade-item buy ${canAfford ? '' : 'locked'}" onclick="${canAfford ? `buyMachine('${machineType}')` : ''}">
+                    <div class="icon">${machine.icon}</div>
+                    <div class="name">${machine.name}</div>
+                    <div class="price">${machine.buyPrice} CR</div>
+                </div>
+            `;
+        }
+    });
+
+    html += '</div></div>';
+
+    html += `<div style="color: var(--ui-accent); text-align: center; margin-top: 10px;">Your Credits: ${game.credits} CR</div>`;
+
+    content.innerHTML = html;
+    modal.style.display = 'block';
+}
+
+function closeTradeModal() {
+    document.getElementById('tradeModal').style.display = 'none';
+}
+
+function sellItem(type, count) {
+    const item = game.robot.inventory.find(i => i.type === type);
+    if (!item || item.count < count) return;
+
+    const res = RESOURCES[type];
+    const price = res.price * count;
+
+    item.count -= count;
+    if (item.count <= 0) {
+        game.robot.inventory = game.robot.inventory.filter(i => i.count > 0);
+    }
+
+    game.credits += price;
+    notify(`Sold ${count} ${res.name} for ${price} CR`);
+
+    // Refresh modal
+    const currentNpc = game.npcs.find(n =>
+        Math.abs(n.x - game.robot.x) < 3 &&
+        Math.abs(n.y - game.robot.y) < 3
+    );
+    if (currentNpc) openTradeModal(currentNpc);
+}
+
+function buyMachine(type) {
+    const machine = MACHINES[type];
+    if (game.credits < machine.buyPrice) {
+        notify('Not enough credits!', 'warning');
+        return;
+    }
+
+    // Add machine components to inventory
+    game.credits -= machine.buyPrice;
+
+    // Give as a "kit" - add materials needed to place
+    for (const [resource, count] of Object.entries(machine.cost)) {
+        addToInventory(resource, count);
+    }
+
+    notify(`Bought ${machine.name} kit!`);
+    closeTradeModal();
+}
+
+// ==================== PLANET TRAVEL ====================
+function openTravelModal() {
+    const modal = document.getElementById('travelModal');
+    const content = document.getElementById('travelContent');
+
+    // Check if player has super fuel
+    const hasFuel = game.robot.inventory.some(i => i.type === 'super_fuel' && i.count >= 1);
+
+    let html = '';
+
+    for (const [key, planet] of Object.entries(CONFIG.PLANETS)) {
+        const isCurrent = key === game.planet;
+        const isLocked = !hasFuel && key !== game.planet;
+        const isSpaceRock = key === 'space_rock_024';
+
+        html += `
+            <div class="planet-option ${isLocked ? 'locked' : ''} ${isCurrent ? 'current' : ''}"
+                 onclick="${!isLocked && !isCurrent ? `travelToPlanet('${key}')` : ''}">
+                <h4>${planet.name} ${isCurrent ? '(Current)' : ''}</h4>
+                <p>Day: ${planet.dayLength === 0 ? 'None' : (planet.dayLength / 60000) + ' min'} |
+                   Night: ${planet.nightLength === Infinity ? 'Always' : (planet.nightLength / 60000) + ' min'}</p>
+                <p>Base Temperature: ${planet.baseTemp}°C</p>
+                ${isSpaceRock ? '<p class="planet-warning">⚠️ WARNING: Bring excess power and fuel!</p>' : ''}
+                ${isLocked ? '<p style="color: #ff6666;">Requires Super Fuel</p>' : ''}
+            </div>
+        `;
+    }
+
+    if (!hasFuel) {
+        html += '<p style="color: #ff6666; text-align: center; margin-top: 10px;">You need Super Fuel to travel!</p>';
+    }
+
+    content.innerHTML = html;
+    modal.style.display = 'block';
+}
+
+function closeTravelModal() {
+    document.getElementById('travelModal').style.display = 'none';
+}
+
+function travelToPlanet(planetKey) {
+    // Consume super fuel
+    const fuelItem = game.robot.inventory.find(i => i.type === 'super_fuel');
+    if (fuelItem) {
+        fuelItem.count--;
+        if (fuelItem.count <= 0) {
+            game.robot.inventory = game.robot.inventory.filter(i => i.count > 0);
+        }
+    }
+
+    // Save current planet machines to separate storage
+    // For simplicity, we'll just generate a new world
+
+    game.planet = planetKey;
+    game.dayTime = 0;
+    game.machines = [];
+    game.resources = [];
+
+    // Generate new world for this planet
+    generateWorld();
+
+    // Reset robot position
+    game.robot.x = 256;
+    game.robot.y = 256;
+
+    closeTravelModal();
+    notify(`Arrived at ${CONFIG.PLANETS[planetKey].name}!`);
+
+    if (planetKey === 'space_rock_024') {
+        notify('⚠️ No daylight here! Manage your power carefully!', 'danger');
+    }
+
+    saveGame();
+}
+
+// ==================== PAUSE/MENU ====================
+function togglePause() {
+    game.paused = !game.paused;
+    document.getElementById('pauseMenu').style.display = game.paused ? 'block' : 'none';
+}
+
+function resumeGame() {
+    game.paused = false;
+    document.getElementById('pauseMenu').style.display = 'none';
+}
+
+function showControls() {
+    notify('WASD: Move | Scroll: Zoom | Middle: Pan | Tab: Build | I: Inventory | F: Follow | Space: Pause');
+}
+
+function quitToMenu() {
+    location.reload();
+}
+
+// ==================== SAVE/LOAD ====================
+function saveGame() {
+    const saveData = {
+        version: 1,
+        planet: game.planet,
+        dayTime: game.dayTime,
+        robot: game.robot,
+        machines: game.machines,
+        resources: game.resources,
+        explored: game.explored,
+        credits: game.credits,
+        stats: game.stats,
+        cheats: game.cheatsActive,
+        theme: game.theme,
+        sunTrackers: game.sunTrackers
+    };
+
+    localStorage.setItem('frozen_factory_save', JSON.stringify(saveData));
+    notify('Game saved!');
+}
+
+function loadGame() {
+    const data = localStorage.getItem('frozen_factory_save');
+    if (!data) return false;
+
+    try {
+        const saveData = JSON.parse(data);
+        game.planet = saveData.planet;
+        game.dayTime = saveData.dayTime;
+        game.robot = saveData.robot;
+        game.machines = saveData.machines;
+        game.resources = saveData.resources;
+        game.explored = saveData.explored;
+        game.credits = saveData.credits;
+        game.stats = saveData.stats;
+        game.cheatsActive = saveData.cheats || {};
+        game.theme = saveData.theme;
+        game.sunTrackers = saveData.sunTrackers || [];
+
+        applyTheme(game.theme);
+        return true;
+    } catch (e) {
+        console.error('Failed to load save:', e);
+        return false;
+    }
+}
+
+// ==================== NOTIFICATIONS ====================
+function notify(message, type = 'info') {
+    const container = document.getElementById('notifications');
+    const notif = document.createElement('div');
+    notif.className = `notification ${type}`;
+    notif.textContent = message;
+    container.appendChild(notif);
+
+    setTimeout(() => notif.remove(), 5000);
+}
+
+// ==================== CHEATS ====================
+function closeCheatMenu() {
+    document.getElementById('cheatMenu').style.display = 'none';
+}
+
+function cheatAddBattery() {
+    game.robot.battery = game.robot.maxBattery;
+    notify('Battery refilled!');
+}
+
+function cheatAddWarmth() {
+    game.robot.temperature = 30;
+    notify('Robot warmed up!');
+}
+
+function cheatAddItems() {
+    addToInventory('iron_ingot', 50);
+    addToInventory('copper_ingot', 50);
+    addToInventory('steel', 25);
+    addToInventory('circuit', 10);
+    addToInventory('crystal', 20);
+    game.credits += 1000;
+    notify('Items and credits added!');
+}
+
+function cheatFreeCrafting() {
+    game.cheatsActive.freeCrafting = !game.cheatsActive.freeCrafting;
+    document.getElementById('cheatFreeCraft').classList.toggle('active');
+    notify(`Free crafting: ${game.cheatsActive.freeCrafting ? 'ON' : 'OFF'}`);
+}
+
+function cheatLantern() {
+    for (let y = 0; y < CONFIG.MAP_SIZE; y++) {
+        for (let x = 0; x < CONFIG.MAP_SIZE; x++) {
+            game.explored[y][x] = true;
+        }
+    }
+    notify('Map revealed!');
+}
+
+function cheatNoDeath() {
+    game.cheatsActive.noDeath = !game.cheatsActive.noDeath;
+    document.getElementById('cheatNoDeath').classList.toggle('active');
+    notify(`No death: ${game.cheatsActive.noDeath ? 'ON' : 'OFF'}`);
+}
+
+function cheatRocketLauncher() {
+    game.cheatsActive.rocketLauncher = !game.cheatsActive.rocketLauncher;
+    if (game.cheatsActive.rocketLauncher) {
+        game.rocketMode = 'destroy'; // destroy, clear, launch
+    }
+    document.getElementById('cheatRocket').classList.toggle('active');
+    notify(`Rocket launcher: ${game.cheatsActive.rocketLauncher ? 'ON (Mode: DESTROY - Press 1/2/3 to change)' : 'OFF'}`);
+}
+
+function cycleRocketMode() {
+    const modes = ['destroy', 'clear', 'launch'];
+    const currentIndex = modes.indexOf(game.rocketMode);
+    game.rocketMode = modes[(currentIndex + 1) % modes.length];
+    notify(`Rocket mode: ${game.rocketMode.toUpperCase()}`);
+}
+
+function fireRocket(worldX, worldY) {
+    if (!game.cheatsActive.rocketLauncher) return;
+
+    const wx = wrapCoord(Math.floor(worldX));
+    const wy = wrapCoord(Math.floor(worldY));
+
+    // Create explosion particles
+    for (let i = 0; i < 20; i++) {
+        game.particles.push({
+            x: worldX,
+            y: worldY,
+            vx: (Math.random() - 0.5) * 8,
+            vy: (Math.random() - 0.5) * 8,
+            life: 1.5,
+            color: game.rocketMode === 'destroy' ? '#ff4400' :
+                   game.rocketMode === 'clear' ? '#88ccff' : '#44ff88'
+        });
+    }
+
+    if (game.rocketMode === 'destroy') {
+        // Destroy machine at location
+        const machine = getMachineAt(wx, wy);
+        if (machine) {
+            game.machines = game.machines.filter(m => m !== machine);
+            notify('💥 Machine destroyed!');
+        } else {
+            notify('No machine to destroy');
+        }
+    } else if (game.rocketMode === 'clear') {
+        // Clear terrain in radius
+        for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+                const tx = wrapCoord(wx + dx);
+                const ty = wrapCoord(wy + dy);
+                if (game.tiles[ty] && game.tiles[ty][tx]) {
+                    game.tiles[ty][tx].type = 'snow';
+                }
+                // Remove resource nodes in blast
+                game.resources = game.resources.filter(r =>
+                    !(r.x === tx && r.y === ty)
+                );
+            }
+        }
+        notify('💥 Terrain cleared!');
+    } else if (game.rocketMode === 'launch') {
+        // Launch robot to location
+        game.robot.x = worldX;
+        game.robot.y = worldY;
+        game.camera.following = true;
+        notify('🚀 Robot launched!');
+    }
+}
+
+// ==================== PARTICLES ====================
+function updateParticles(dt) {
+    game.particles = game.particles.filter(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt;
+        return p.life > 0;
+    });
+}
+
+// ==================== SUN TRACKER ROBOTS ====================
+function updateSunTrackers(dt) {
+    game.sunTrackers.forEach(tracker => {
+        // States: 'collecting', 'returning', 'depositing', 'waiting'
+
+        if (tracker.state === 'waiting') {
+            // Wait for daytime to start collecting
+            if (game.isDay) {
+                tracker.state = 'collecting';
+                tracker.charge = 0;
+            }
+            return;
+        }
+
+        if (tracker.state === 'collecting') {
+            // Move toward "sun" (random wander while charging)
+            if (game.isDay) {
+                // Wander randomly
+                tracker.wanderTimer = (tracker.wanderTimer || 0) + dt;
+                if (tracker.wanderTimer > 2) {
+                    tracker.targetX = tracker.x + (Math.random() - 0.5) * 20;
+                    tracker.targetY = tracker.y + (Math.random() - 0.5) * 20;
+                    tracker.wanderTimer = 0;
+                }
+
+                // Move toward target
+                const dx = (tracker.targetX || tracker.homeX) - tracker.x;
+                const dy = (tracker.targetY || tracker.homeY) - tracker.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 1) {
+                    tracker.x += (dx / dist) * 2 * dt;
+                    tracker.y += (dy / dist) * 2 * dt;
+                }
+
+                // Wrap coordinates
+                tracker.x = wrapCoord(tracker.x);
+                tracker.y = wrapCoord(tracker.y);
+
+                // Collect solar energy
+                tracker.charge += 5 * dt;
+
+                // When fully charged, return home
+                if (tracker.charge >= 100) {
+                    tracker.state = 'returning';
+                }
+            } else {
+                // Night fell, return home with partial charge
+                tracker.state = 'returning';
+            }
+        }
+
+        if (tracker.state === 'returning') {
+            // Move back to home battery bank
+            const dx = tracker.homeX - tracker.x;
+            const dy = tracker.homeY - tracker.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 1) {
+                tracker.x += (dx / dist) * 3 * dt;
+                tracker.y += (dy / dist) * 3 * dt;
+            } else {
+                tracker.state = 'depositing';
+            }
+
+            // Wrap coordinates
+            tracker.x = wrapCoord(tracker.x);
+            tracker.y = wrapCoord(tracker.y);
+
+            // Drain some energy for movement
+            tracker.charge -= 0.5 * dt;
+            if (tracker.charge < 0) tracker.charge = 0;
+        }
+
+        if (tracker.state === 'depositing') {
+            // Find battery bank at home
+            const bank = game.machines.find(m =>
+                m.type === 'battery_bank' &&
+                Math.abs(m.x - tracker.homeX) < 2 &&
+                Math.abs(m.y - tracker.homeY) < 2
+            );
+
+            if (bank && tracker.charge > 0) {
+                // Deposit charge
+                const deposit = Math.min(tracker.charge, 50);
+                bank.stored = (bank.stored || 0) + deposit;
+                tracker.charge = 0;
+                notify(`Sun Tracker deposited ${Math.floor(deposit)} energy`);
+            }
+
+            // Wait for next day
+            tracker.state = 'waiting';
+        }
+    });
+}
+
+function spawnSunTracker(bankMachine) {
+    const tracker = {
+        x: bankMachine.x,
+        y: bankMachine.y,
+        homeX: bankMachine.x,
+        homeY: bankMachine.y,
+        charge: 0,
+        state: game.isDay ? 'collecting' : 'waiting',
+        targetX: bankMachine.x,
+        targetY: bankMachine.y,
+        wanderTimer: 0
+    };
+    game.sunTrackers.push(tracker);
+    notify('Sun Tracker deployed!');
+}
+
+// ==================== GAME LOOP ====================
+let lastTime = 0;
+
+function gameLoop(time) {
+    const dt = Math.min((time - lastTime) / 1000, 0.1);
+    lastTime = time;
+
+    if (game.running && !game.paused) {
+        updateRobot(dt);
+        updateMachines(dt);
+        updateDayNight(dt);
+        updateParticles(dt);
+        updateSunTrackers(dt);
+        game.stats.playtime += dt;
+    }
+
+    render();
+    updateUI();
+
+    requestAnimationFrame(gameLoop);
+}
+
+// ==================== START GAME ====================
+function startGame() {
+    // Try to load save
+    if (!loadGame()) {
+        generateWorld();
+    }
+
+    initBuildMenu();
+
+    // Auto-save interval
+    setInterval(() => {
+        if (game.running) saveGame();
+    }, CONFIG.SAVE_INTERVAL);
+
+    game.running = true;
+    notify('Welcome to Frozen Factory!');
+    notify('Use WASD to move, Tab for build menu');
+
+    requestAnimationFrame(gameLoop);
+}
+
+// Check for existing save and theme
+const existingSave = localStorage.getItem('frozen_factory_save');
+if (existingSave) {
+    try {
+        const data = JSON.parse(existingSave);
+        if (data.theme) {
+            // Skip theme selection, use saved theme
+            applyTheme(data.theme);
+            document.getElementById('themeModal').style.display = 'none';
+            document.getElementById('ui').style.display = 'block';
+            startGame();
+        }
+    } catch(e) {}
+}
+</script>
+</body>
+</html>

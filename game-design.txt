@@ -1,0 +1,221 @@
+FROZEN FACTORY - Game Design Document
+======================================
+
+CONCEPT
+-------
+You're a robot running a factory on frozen alien worlds. The cold is relentless -
+machines freeze if you can't keep them warm. Generate power, manage heat, harvest
+resources, and eventually build super fuel to escape to even harsher planets.
+
+
+VISUAL STYLE
+------------
+- Isometric view (like Project Zomboid)
+- High-definition pixel art, 32-64px tiles
+- Sci-fi industrial aesthetic
+- Glowing power lines, steam vents, ice crystals
+
+
+THE ROBOT (PLAYER)
+------------------
+- Visible character you walk around with WASD
+- Has a personal inventory (limited slots)
+- Must physically walk to machines to interact
+- Can carry items between machines manually
+- Can freeze but has long batteries and low power consumption heaters built in default batteries last 2 cycles but can be upgraded
+
+
+DAY/NIGHT CYCLE
+---------------
+- Day lasts 10 real minutes
+- Night lasts 15 real minutes
+- Sun provides passive heat during day (enough to survive early game)
+- Night = no solar heat, machines freeze fast without heaters
+
+
+TEMPERATURE & FREEZING
+----------------------
+Machines have temperature states:
+  OPTIMAL (green)    - Full speed
+  COLD (blue)        - 50% efficiency, warning indicator
+  FROZEN (white)     - Completely stopped, takes time to thaw
+  OVERHEATED (orange)- Fire risk!
+  ON FIRE (red)      - Spreading, will explode
+
+Heat formula:
+  Machine Temp = Planet Base + Sun Heat + Heater Heat - Cold Decay
+
+  Sun Heat: +30 during day, 0 at night
+  Heater Heat: +20 per nearby heater (heat decays with distance from heater)
+  Cold Decay: -5 per second (faster on harder planets)
+
+
+FIRE SYSTEM
+-----------
+- Heaters running at max power for 60+ seconds risk catching fire but add a way to cool things like passive cooling (heat sinks, copper wires, etc) and active cooling (fans, moving snow through a pipe, etc)
+- Fire spreads to adjacent tiles every 5 seconds
+- Burning machines take damage and eventually explode
+- Fire Extinguisher Stations auto-suppress fires within 5 tiles
+- Player can manually extinguish with E key (unlimited use)
+
+
+POWER SYSTEM
+------------
+Solar Panel     - Free power during day, nothing at night
+Generator       - Burns coal/fuel, works anytime
+Battery         - Stores excess power for nighttime use
+
+Power flows through cables. Unpowered machines won't run.
+
+
+MACHINES
+--------
+MINING:
+  Miner          - Extracts ore from resource nodes
+                   (IMPORTANT: nodes deplete over time, forcing expansion and resource conservation)
+  Water Miner    - Drills into ice for water
+
+PROCESSING:
+  Furnace        - Smelts ore into ingots
+  Assembler      - Crafts parts from processed materials
+  Fuel Refinery  - Creates super fuel for planet travel
+  024 Refiner    - Unlocked upon reaching Space Rock-024 and should be extremely difficult to get, endgame
+
+HEAT:
+  Heater         - Warms nearby machines, uses power, CAN CAUSE FIRES
+  Heat Lamp      - Weaker but safer alternative
+  Sun Tracker    - A robot that runs around the planet collecting solar and bringing charged batteries back, so you would have a bank that it deposits charged batteries into
+
+SAFETY:
+  Fire Extinguisher Station - Auto-fights fires in radius (upgradable with more power for more range)
+  Lights - Provide lights for the dark nights
+
+LOGISTICS:
+  Conveyor Belt  - Moves items automatically between machines
+  Storage Crate  - Holds resources and parts
+  Landing Pad    - Required for traveling to other planets
+  Pipes          - moves liquids or semi-liquids (snow) (at a slower pace)
+
+
+RESOURCES
+---------
+Raw (mined from nodes):
+  Iron Ore, Copper Ore, Coal, Crystal, Dark Matter, Quantum Ore
+
+Processed:
+  Iron Ingot, Copper Ingot, Steel, Circuits, Engine Parts
+
+Special:
+  Super Fuel - Made from rare resources across multiple planets
+
+
+ECONOMY
+-------
+Buyers are at fixed locations on the map:
+  (be able to buy appropriate things from these people too)
+  Scrap Dealer   - Buys raw ore (low prices)
+  Parts Merchant - Buys crafted parts (medium prices)
+  Collector      - Buys rare items (high prices, specific requests)
+
+Walk to a buyer and interact to sell from your inventory.
+Prices fluctuate slightly. Bulk sales get bonuses.
+
+
+MAP
+---
+- 512x512 tiles per planet (very large)
+- Procedurally generated terrain and resource placement
+- WRAPS AROUND - walk off one edge, appear on the opposite side
+- Zoom in/out with mouse wheel
+- Pan camera with middle mouse drag
+
+
+PLANETS
+-------
+Travel requires Super Fuel and a Landing Pad.
+Each planet is harder than the last:
+
+  TERRA PRIME (Starting Planet)
+    Day: 10 min, Night: 15 min
+    Resources: Iron, Copper, Coal
+    Difficulty: Baseline
+
+  FROST MOON
+    Day: 8 min, Night: 17 min
+    Resources: Crystal (new)
+    Difficulty: Colder base temperature
+
+  SHADOW BELT
+    Day: 5 min, Night: 20 min
+    Resources: Dark Matter (new)
+    Difficulty: Very short days
+
+  ICE GIANT
+    Day: 3 min, Night: 22 min
+    Resources: Quantum Ore (new)
+    Difficulty: Extreme cold, barely any sunlight
+
+  SPACE ROCK-024 (give warning to bring excess power and fuel when going there)
+    Day: none, Night: always
+    Resources: 024 (nodes are infinite and can be refined down into all different resources)
+    Difficulty: Ridiculous, gets even colder than any other planet making machines thaw 50% slower, and making machines freeze 50% faster
+
+CONTROLS
+--------
+WASD             - Move robot
+Mouse Wheel      - Zoom
+Middle Mouse     - Pan camera
+Left Click       - Interact / Place building
+Right Click      - Open machine menu / Cancel
+R                - Rotate building before placing
+E                - Use extinguisher / Pick up item
+Q                - Drop held item
+Space            - Pause game
+Tab              - Build menu
+I                - Inventory
+M                - Full map view
+F                - Toggle camera follow
+
+
+PROGRESSION LOOP
+----------------
+1. Start with basic miner and solar panel
+2. Mine resources during the day while sun keeps things warm
+3. Build heaters and batteries before first nightfall
+4. Expand mining as nodes deplete
+5. Set up production chains (ore -> ingots -> parts)
+6. Sell products to buyers for currency
+7. Buy/craft better machines
+8. Build fuel refinery, create super fuel
+9. Travel to next planet
+10. Repeat with harder conditions and new resources
+
+
+SAVE SYSTEM
+-----------
+Auto-saves to browser localStorage every 5 seconds.
+Also saves when traveling between planets.
+Progress persists between sessions.
+
+
+IMPLEMENTATION PHASES
+---------------------
+1. Core rendering - isometric grid, camera, zoom
+2. Robot movement and collision
+3. Tile placement system
+4. Day/night cycle with lighting
+5. Temperature and freezing mechanics
+6. Power system (solar, generators, batteries)
+7. Resource nodes and mining
+8. Production chain (conveyor, furnace, assembler)
+9. Fire system (heater risk, spreading, extinguishers)
+10. Economy (buyers, currency, selling)
+11. Planet travel and generation
+12. Polish (particles, audio, UI)
+
+
+FINAL NOTES OF WHAT I WANT ADDED
+--------------------------------
+type levitysm on the keyboard to activate the cheat menu
+
+Cheat Menu - options for adding battery, warmth, items, free crafting, lantern, no death and rocket launcher.
