@@ -188,18 +188,14 @@
             background: var(--ui-bg);
             border-top: 2px solid var(--ui-border);
             display: flex;
-            justify-content: center;
-            align-items: flex-start;
             padding: 10px 20px;
             gap: 20px;
         }
 
         #buildMenu {
-            flex: 1;
-            max-width: 600px;
+            width: 400px;
             display: flex;
             flex-wrap: wrap;
-            justify-content: center;
             gap: 5px;
             overflow-y: auto;
         }
@@ -237,8 +233,7 @@
         }
 
         #selectedInfo {
-            width: 200px;
-            min-width: 200px;
+            flex: 1;
             background: var(--ui-button);
             border-radius: 5px;
             padding: 10px;
@@ -248,7 +243,6 @@
 
         #robotStatus {
             width: 200px;
-            min-width: 200px;
             background: var(--ui-button);
             border-radius: 5px;
             padding: 10px;
@@ -819,11 +813,11 @@
 
         <!-- Bottom Bar -->
         <div id="bottomBar">
+            <div id="buildMenu"></div>
             <div id="selectedInfo">
                 <h4 style="color: var(--ui-accent);">Nothing Selected</h4>
                 <p style="font-size: 12px;">Click on a machine or use build menu</p>
             </div>
-            <div id="buildMenu"></div>
             <div id="robotStatus">
                 <h4 style="color: var(--ui-accent); margin-bottom: 10px;">Robot Status</h4>
                 <div class="status-row">
@@ -3019,7 +3013,31 @@ function selectBuild(type, element) {
     selectedBuild = type;
     document.querySelectorAll('.build-item').forEach(el => el.classList.remove('selected'));
     if (element) element.classList.add('selected');
-    notify(`Selected: ${MACHINES[type].name}`);
+
+    // Update selectedInfo panel with building info
+    const machine = MACHINES[type];
+    const info = document.getElementById('selectedInfo');
+
+    let costHtml = '';
+    for (const [res, count] of Object.entries(machine.cost)) {
+        const resName = RESOURCES[res]?.name || res;
+        const resColor = RESOURCES[res]?.color || '#fff';
+        const hasEnough = game.robot.inventory.find(i => i.type === res && i.count >= count);
+        const color = hasEnough ? '#8f8' : '#f88';
+        costHtml += `<div style="color: ${color}; font-size: 11px;">• ${count}x ${resName}</div>`;
+    }
+
+    info.innerHTML = `
+        <h4 style="color: var(--ui-accent);">${machine.icon} ${machine.name}</h4>
+        <p style="font-size: 11px; margin: 5px 0; opacity: 0.8;">${machine.desc || 'Click on map to place'}</p>
+        <div style="margin-top: 8px;">
+            <div style="font-size: 10px; color: #aaa; margin-bottom: 3px;">COST:</div>
+            ${costHtml}
+        </div>
+        <div style="font-size: 10px; color: #888; margin-top: 8px;">Power: ${machine.power > 0 ? '+' + machine.power : machine.power}/s</div>
+    `;
+
+    notify(`Selected: ${machine.name}`);
 }
 
 function placeMachine(type, x, y) {
@@ -3590,8 +3608,8 @@ function renderChunk(chunkX, chunkY) {
             if (screen.y < -CONFIG.TILE_HEIGHT * 2 || screen.y > canvas.height + CONFIG.TILE_HEIGHT * 2) continue;
 
             const tile = game.tiles[wy][wx];
-            // Get light level based on tile's X position relative to sun
-            const lightLevel = getTileLightLevel(wx);
+            // Get light level based on tile's visual X position (unwrapped) for smooth transitions
+            const lightLevel = getTileLightLevel(x);
             drawIsometricTile(screen.x, screen.y, getTileColor(tile.type), lightLevel);
         }
     }
