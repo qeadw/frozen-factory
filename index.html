@@ -3734,6 +3734,49 @@ function renderChunk(chunkX, chunkY) {
     }
 }
 
+// ==================== CABLE RENDERING HELPERS (Factorio-style) ====================
+
+// Draw a catenary curve (realistic wire sag)
+function drawCatenaryWire(ctx, x1, y1, x2, y2, sag) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+
+    // Use quadratic bezier for catenary approximation
+    // Control point at midpoint, offset down by sag amount
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2 + sag;
+
+    ctx.quadraticCurveTo(midX, midY, x2, y2);
+    ctx.stroke();
+}
+
+// Draw connector/insulator at cable endpoint
+function drawCableConnector(ctx, x, y, zoom) {
+    // Ceramic insulator base (darker)
+    ctx.fillStyle = '#4a4a4a';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 2 * zoom, 4 * zoom, 2 * zoom, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Metal connector (copper colored)
+    ctx.fillStyle = '#b87333';
+    ctx.beginPath();
+    ctx.arc(x, y, 3 * zoom, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Highlight on metal
+    ctx.fillStyle = '#dda066';
+    ctx.beginPath();
+    ctx.arc(x - 1 * zoom, y - 1 * zoom, 1.5 * zoom, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Small bolt detail
+    ctx.fillStyle = '#666666';
+    ctx.beginPath();
+    ctx.arc(x, y, 1 * zoom, 0, Math.PI * 2);
+    ctx.fill();
+}
+
 function render() {
     // Clear
     ctx.fillStyle = game.isDay ? '#1a2a3a' : '#0a0a12';
@@ -3772,61 +3815,104 @@ function render() {
         ctx.fillText('●', screen.x, screen.y);
     });
 
-    // Draw cables between machines
+    // Draw cables between machines (Factorio-style)
     if (game.cables && game.cables.length > 0) {
-        ctx.strokeStyle = '#ffcc00';
-        ctx.lineWidth = 3 * game.camera.zoom;
         game.cables.forEach(cable => {
-        const fromScreen = worldToScreen(cable.from.x, cable.from.y);
-        const toScreen = worldToScreen(cable.to.x, cable.to.y);
+            const fromScreen = worldToScreen(cable.from.x, cable.from.y);
+            const toScreen = worldToScreen(cable.to.x, cable.to.y);
 
-        // Skip if both endpoints are off-screen
-        if ((fromScreen.x < -100 || fromScreen.x > canvas.width + 100) &&
-            (toScreen.x < -100 || toScreen.x > canvas.width + 100)) return;
+            // Skip if both endpoints are off-screen
+            if ((fromScreen.x < -100 || fromScreen.x > canvas.width + 100) &&
+                (toScreen.x < -100 || toScreen.x > canvas.width + 100)) return;
 
-        // Draw cable line with slight curve
-        ctx.beginPath();
-        ctx.moveTo(fromScreen.x, fromScreen.y - 15 * game.camera.zoom);
+            const z = game.camera.zoom;
+            const fromY = fromScreen.y - 25 * z;
+            const toY = toScreen.y - 25 * z;
 
-        // Add a slight sag to the cable
-        const midX = (fromScreen.x + toScreen.x) / 2;
-        const midY = (fromScreen.y + toScreen.y) / 2 + 10 * game.camera.zoom;
-        ctx.quadraticCurveTo(midX, midY, toScreen.x, toScreen.y - 15 * game.camera.zoom);
+            // Calculate cable length for sag amount
+            const dx = toScreen.x - fromScreen.x;
+            const dy = toY - fromY;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const sagAmount = Math.min(length * 0.15, 25 * z); // Realistic catenary sag
 
-        ctx.stroke();
+            // Draw shadow first (offset toward sun direction)
+            const shadowOffsetX = 4 * z;
+            const shadowOffsetY = 8 * z;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.lineWidth = 2 * z;
+            drawCatenaryWire(ctx,
+                fromScreen.x + shadowOffsetX, fromY + shadowOffsetY,
+                toScreen.x + shadowOffsetX, toY + shadowOffsetY,
+                sagAmount);
 
-        // Draw connection points
-        ctx.fillStyle = '#ffcc00';
-        ctx.beginPath();
-        ctx.arc(fromScreen.x, fromScreen.y - 15 * game.camera.zoom, 4 * game.camera.zoom, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(toScreen.x, toScreen.y - 15 * game.camera.zoom, 4 * game.camera.zoom, 0, Math.PI * 2);
-        ctx.fill();
+            // Draw three parallel copper wires (like real power lines)
+            const wireOffsets = [-3, 0, 3];
+            wireOffsets.forEach((offset, i) => {
+                // Copper gradient - darker on edges, brighter in middle
+                const brightness = i === 1 ? 1.0 : 0.7;
+                const r = Math.floor(205 * brightness);
+                const g = Math.floor(127 * brightness);
+                const b = Math.floor(50 * brightness);
+                ctx.strokeStyle = `rgb(${r}, ${g}, ${b})`;
+                ctx.lineWidth = (i === 1 ? 2 : 1.5) * z;
+
+                drawCatenaryWire(ctx,
+                    fromScreen.x + offset * z * 0.5, fromY + offset * z * 0.3,
+                    toScreen.x + offset * z * 0.5, toY + offset * z * 0.3,
+                    sagAmount + (i === 1 ? 0 : 2 * z));
+            });
+
+            // Draw electricity sparks occasionally
+            if (Math.random() < 0.02) {
+                const sparkPos = 0.3 + Math.random() * 0.4;
+                const sparkX = fromScreen.x + dx * sparkPos;
+                const sparkY = fromY + dy * sparkPos + sagAmount * Math.sin(sparkPos * Math.PI);
+                ctx.fillStyle = '#aaddff';
+                ctx.beginPath();
+                ctx.arc(sparkX, sparkY, 2 * z, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Draw insulators/connectors at endpoints
+            drawCableConnector(ctx, fromScreen.x, fromY, z);
+            drawCableConnector(ctx, toScreen.x, toY, z);
         });
     }
 
     // Draw cable in progress (from cableStart to cursor)
     if (game.cableStart && selectedBuild === 'cable_tool') {
         const startScreen = worldToScreen(game.cableStart.x, game.cableStart.y);
-        ctx.strokeStyle = '#ffcc0088';
-        ctx.lineWidth = 2 * game.camera.zoom;
-        ctx.setLineDash([5, 5]);
-        ctx.beginPath();
-        ctx.moveTo(startScreen.x, startScreen.y - 15 * game.camera.zoom);
-        ctx.lineTo(mouseX, mouseY);
-        ctx.stroke();
+        const z = game.camera.zoom;
+        const startY = startScreen.y - 25 * z;
+
+        // Dashed preview line
+        ctx.strokeStyle = '#cd7f32aa';
+        ctx.lineWidth = 2 * z;
+        ctx.setLineDash([8 * z, 4 * z]);
+
+        const dx = mouseX - startScreen.x;
+        const dy = mouseY - startY;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const sagAmount = Math.min(length * 0.15, 25 * z);
+
+        drawCatenaryWire(ctx, startScreen.x, startY, mouseX, mouseY, sagAmount);
         ctx.setLineDash([]);
 
-        // Highlight the start machine
-        ctx.strokeStyle = '#ffcc00';
-        ctx.lineWidth = 3;
+        // Highlight the start machine with glowing border
+        ctx.strokeStyle = '#cd7f32';
+        ctx.lineWidth = 2 * z;
+        ctx.shadowColor = '#ffaa44';
+        ctx.shadowBlur = 10;
         ctx.strokeRect(
-            startScreen.x - 20 * game.camera.zoom,
-            startScreen.y - 35 * game.camera.zoom,
-            40 * game.camera.zoom,
-            40 * game.camera.zoom
+            startScreen.x - 18 * z,
+            startScreen.y - 40 * z,
+            36 * z,
+            36 * z
         );
+        ctx.shadowBlur = 0;
+
+        // Draw connector at start
+        drawCableConnector(ctx, startScreen.x, startY, z);
     }
 
     // Draw machines with new sprites
