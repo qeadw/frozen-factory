@@ -1432,7 +1432,7 @@ function isoCylinder(ctx, cx, cy, r, h, topCol, sideCol) {
 const SPRITES = {
     // Solar Panel - tilted panel on stand
     solar_panel: (ctx, w, h, frame, isDay) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Support post
         isoCube(ctx, cx, cy + 8, 4, 0, 20, '#556677', '#445566', '#667788');
@@ -1481,7 +1481,7 @@ const SPRITES = {
 
     // Miner - drilling machine (isometric)
     miner: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Base platform
         isoCube(ctx, cx, cy, 16, 0, 8, '#886644', '#775533', '#997755');
@@ -1530,7 +1530,7 @@ const SPRITES = {
 
     // Furnace - smelting with fire (isometric)
     furnace: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Stone base
         isoCube(ctx, cx, cy, 18, 0, 20, '#776655', '#665544', '#887766');
@@ -1576,7 +1576,7 @@ const SPRITES = {
 
     // Heater - glowing heating element (isometric)
     heater: (ctx, w, h, frame, active, overheated) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Metal casing
         isoCube(ctx, cx, cy, 14, 0, 22, '#555566', '#444455', '#666677');
@@ -1610,7 +1610,7 @@ const SPRITES = {
 
     // Battery - power storage (isometric)
     battery: (ctx, w, h, frame, chargePercent) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
         const charge = chargePercent || 50;
 
         // Main battery body
@@ -1638,7 +1638,7 @@ const SPRITES = {
 
     // Conveyor belt - animated (isometric)
     conveyor: (ctx, w, h, frame, rotation) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
         const rot = rotation || 0;
 
         // Belt frame
@@ -1694,7 +1694,7 @@ const SPRITES = {
 
     // Storage crate (isometric)
     storage: (ctx, w, h, frame, fillPercent) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Wooden crate body
         isoCube(ctx, cx, cy, 16, 0, 18, '#aa7744', '#886633', '#bb8855');
@@ -1732,7 +1732,7 @@ const SPRITES = {
 
     // Generator (isometric)
     generator: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Main housing
         isoCube(ctx, cx, cy, 16, 0, 18, '#445566', '#334455', '#556677');
@@ -1777,7 +1777,7 @@ const SPRITES = {
 
     // Robot player (isometric)
     robot: (ctx, w, h, frame, frozen, moving) => {
-        const cx = 32, cy = 52;
+        const cx = 64, cy = 100;
         const bobY = moving ? Math.sin(frame * 0.5) * 2 : 0;
         const bodyColor = frozen ? '#88aacc' : '#55aa55';
         const darkBody = frozen ? '#6688aa' : '#448844';
@@ -1847,7 +1847,7 @@ const SPRITES = {
 
     // Fire effect (isometric)
     fire: (ctx, w, h, frame) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
         const fireColors = ['#ff2200', '#ff4400', '#ff6600', '#ff8800', '#ffaa00', '#ffcc00'];
 
         // Fire particles rising
@@ -1870,7 +1870,7 @@ const SPRITES = {
 
     // Light (isometric)
     light: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Base
         isoTop(ctx, cx, cy + 4, 10, '#444455');
@@ -1903,7 +1903,7 @@ const SPRITES = {
 
     // Landing pad (isometric)
     landing_pad: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Main platform (flat isometric)
         isoTop(ctx, cx, cy, 24, '#555566');
@@ -1948,7 +1948,7 @@ const SPRITES = {
 
     // Extinguisher station (isometric)
     extinguisher: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Red cabinet
         isoCube(ctx, cx, cy, 12, 0, 24, '#dd3333', '#aa1111', '#ee4444');
@@ -1977,7 +1977,7 @@ const SPRITES = {
 
     // Heat sink (isometric)
     heat_sink: (ctx, w, h, frame) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Base plate
         isoCube(ctx, cx, cy, 18, 0, 4, '#556677', '#445566', '#667788');
@@ -1992,7 +1992,7 @@ const SPRITES = {
 
     // Fan (isometric)
     fan: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Base/housing (isometric cylinder shape)
         isoCube(ctx, cx, cy, 14, 0, 6, '#555566', '#444455', '#666677');
@@ -2035,7 +2035,7 @@ const SPRITES = {
 
     // Sun tracker robot (isometric)
     sun_tracker: (ctx, w, h, frame, state, charge) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Wheels (4 small cylinders)
         isoCylinder(ctx, cx - 10, cy + 4, 4, 4, '#444444', '#333333');
@@ -2080,7 +2080,7 @@ const SPRITES = {
 
     // Water miner (isometric)
     water_miner: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Ice platform
         isoTop(ctx, cx, cy + 4, 18, '#88ccee');
@@ -2134,7 +2134,7 @@ const SPRITES = {
 
     // Assembler (isometric)
     assembler: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Base platform
         isoCube(ctx, cx, cy, 20, 0, 6, '#445566', '#334455', '#556677');
@@ -2175,7 +2175,7 @@ const SPRITES = {
 
     // Heat lamp (isometric)
     heat_lamp: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Base
         isoTop(ctx, cx, cy + 4, 10, '#444455');
@@ -2225,7 +2225,7 @@ const SPRITES = {
 
     // Pipe (isometric)
     pipe: (ctx, w, h, frame, rotation, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
         const rot = rotation || 0;
         const isHorizontal = (rot % 2) === 0;
 
@@ -2275,7 +2275,7 @@ const SPRITES = {
 
     // Repair robot (isometric)
     repair_robot: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Treads (animated)
         const treadAnim = active ? frame : 0;
@@ -2315,7 +2315,7 @@ const SPRITES = {
 
     // Battery bank (isometric)
     battery_bank: (ctx, w, h, frame, charge) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Rack frame
         isoCube(ctx, cx, cy, 22, 0, 24, '#444455', '#333344', '#555566');
@@ -2353,7 +2353,7 @@ const SPRITES = {
 
     // Fuel refinery (isometric)
     fuel_refinery: (ctx, w, h, frame, active) => {
-        const cx = 32, cy = 48;
+        const cx = 64, cy = 96;
 
         // Base platform
         isoCube(ctx, cx, cy, 22, 0, 4, '#445555', '#334444', '#556666');
@@ -2409,7 +2409,7 @@ function drawSprite(type, x, y, options = {}) {
     const spriteFunc = SPRITES[type];
     if (!spriteFunc) return;
 
-    const size = 64;
+    const size = 128;
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = size;
     tempCanvas.height = size;
@@ -2422,7 +2422,7 @@ function drawSprite(type, x, y, options = {}) {
     const scale = game.camera.zoom;
     ctx.drawImage(tempCanvas,
         x - (size * scale) / 2,
-        y - (size * scale),
+        y - (size * scale) * 0.75,
         size * scale,
         size * scale);
 }
