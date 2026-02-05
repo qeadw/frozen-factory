@@ -577,6 +577,66 @@
             font-weight: bold;
         }
 
+        /* Save Slots */
+        .save-slots {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .save-slot {
+            width: 180px;
+            padding: 15px;
+            background: rgba(30, 40, 50, 0.9);
+            border: 3px solid #334;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .save-slot:hover {
+            border-color: #88ccff;
+            transform: scale(1.05);
+        }
+
+        .save-slot.selected {
+            border-color: #44ff88;
+            box-shadow: 0 0 15px #44ff88;
+        }
+
+        .save-slot h3 {
+            color: #88ccff;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .save-slot .save-info {
+            color: #888;
+            font-size: 11px;
+            margin: 3px 0;
+        }
+
+        .save-slot .save-info.exists {
+            color: #aaa;
+        }
+
+        .save-slot .delete-save {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background: #533;
+            border: 1px solid #755;
+            border-radius: 5px;
+            color: #faa;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .save-slot .delete-save:hover {
+            background: #744;
+        }
+
         /* Notifications */
         #notifications {
             position: absolute;
@@ -614,7 +674,9 @@
     <!-- Theme Selection -->
     <div id="themeModal">
         <h1>FROZEN FACTORY</h1>
-        <h2>Select UI Theme</h2>
+        <h2>Select Save Slot</h2>
+        <div class="save-slots" id="saveSlots"></div>
+        <h2 style="margin-top: 30px;">Select UI Theme</h2>
         <div class="theme-options">
             <button class="theme-btn" id="theme-cold" onclick="selectTheme('cold')">
                 <span>Cold Blue</span>
@@ -2754,6 +2816,12 @@ function quitToMenu() {
 }
 
 // ==================== SAVE/LOAD ====================
+let currentSaveSlot = 1;
+
+function getSaveKey(slot) {
+    return `frozen_factory_save_${slot}`;
+}
+
 function saveGame() {
     const saveData = {
         version: 1,
@@ -2767,15 +2835,17 @@ function saveGame() {
         stats: game.stats,
         cheats: game.cheatsActive,
         theme: game.theme,
-        sunTrackers: game.sunTrackers
+        sunTrackers: game.sunTrackers,
+        savedAt: Date.now()
     };
 
-    localStorage.setItem('frozen_factory_save', JSON.stringify(saveData));
+    localStorage.setItem(getSaveKey(currentSaveSlot), JSON.stringify(saveData));
     // Silent auto-save - no notification
 }
 
-function loadGame() {
-    const data = localStorage.getItem('frozen_factory_save');
+function loadGame(slot) {
+    if (slot !== undefined) currentSaveSlot = slot;
+    const data = localStorage.getItem(getSaveKey(currentSaveSlot));
     if (!data) return false;
 
     try {
@@ -2797,6 +2867,71 @@ function loadGame() {
     } catch (e) {
         console.error('Failed to load save:', e);
         return false;
+    }
+}
+
+function getSaveInfo(slot) {
+    const data = localStorage.getItem(getSaveKey(slot));
+    if (!data) return null;
+
+    try {
+        const saveData = JSON.parse(data);
+        const playtime = Math.floor((saveData.stats?.playtime || 0) / 60);
+        const savedAt = saveData.savedAt ? new Date(saveData.savedAt).toLocaleDateString() : 'Unknown';
+        return {
+            planet: CONFIG.PLANETS[saveData.planet]?.name || 'Unknown',
+            playtime: `${playtime} min`,
+            credits: saveData.credits || 0,
+            savedAt: savedAt
+        };
+    } catch (e) {
+        return null;
+    }
+}
+
+function deleteSave(slot, event) {
+    event.stopPropagation();
+    if (confirm(`Delete Save Slot ${slot}?`)) {
+        localStorage.removeItem(getSaveKey(slot));
+        renderSaveSlots();
+    }
+}
+
+function selectSaveSlot(slot) {
+    currentSaveSlot = slot;
+    document.querySelectorAll('.save-slot').forEach(el => el.classList.remove('selected'));
+    document.getElementById(`save-slot-${slot}`).classList.add('selected');
+}
+
+function renderSaveSlots() {
+    const container = document.getElementById('saveSlots');
+    container.innerHTML = '';
+
+    for (let i = 1; i <= 3; i++) {
+        const info = getSaveInfo(i);
+        const slot = document.createElement('div');
+        slot.className = `save-slot ${i === currentSaveSlot ? 'selected' : ''}`;
+        slot.id = `save-slot-${i}`;
+        slot.onclick = () => selectSaveSlot(i);
+
+        if (info) {
+            slot.innerHTML = `
+                <h3>Slot ${i}</h3>
+                <div class="save-info exists">🌍 ${info.planet}</div>
+                <div class="save-info exists">⏱️ ${info.playtime}</div>
+                <div class="save-info exists">💰 ${info.credits} CR</div>
+                <div class="save-info exists">📅 ${info.savedAt}</div>
+                <button class="delete-save" onclick="deleteSave(${i}, event)">Delete</button>
+            `;
+        } else {
+            slot.innerHTML = `
+                <h3>Slot ${i}</h3>
+                <div class="save-info">Empty</div>
+                <div class="save-info">New Game</div>
+            `;
+        }
+
+        container.appendChild(slot);
     }
 }
 
@@ -3071,8 +3206,8 @@ function gameLoop(time) {
 
 // ==================== START GAME ====================
 function startGame() {
-    // Try to load save
-    if (!loadGame()) {
+    // Try to load selected save slot
+    if (!loadGame(currentSaveSlot)) {
         generateWorld();
     }
 
@@ -3084,26 +3219,21 @@ function startGame() {
     }, CONFIG.SAVE_INTERVAL);
 
     game.running = true;
-    notify('Welcome to Frozen Factory!');
+    notify(`Welcome to Frozen Factory! (Slot ${currentSaveSlot})`);
     notify('Use WASD to move, Tab for build menu');
 
     requestAnimationFrame(gameLoop);
 }
 
-// Check for existing save and theme
-const existingSave = localStorage.getItem('frozen_factory_save');
-if (existingSave) {
-    try {
-        const data = JSON.parse(existingSave);
-        if (data.theme) {
-            // Skip theme selection, use saved theme
-            applyTheme(data.theme);
-            document.getElementById('themeModal').style.display = 'none';
-            document.getElementById('ui').style.display = 'block';
-            startGame();
-        }
-    } catch(e) {}
+// Migrate old single save to slot 1 if it exists
+const oldSave = localStorage.getItem('frozen_factory_save');
+if (oldSave && !localStorage.getItem('frozen_factory_save_1')) {
+    localStorage.setItem('frozen_factory_save_1', oldSave);
+    localStorage.removeItem('frozen_factory_save');
 }
+
+// Initialize save slots display on page load
+renderSaveSlots();
 </script>
 </body>
 </html>
