@@ -1800,59 +1800,172 @@ const SPRITES = {
         }
     },
 
-    // Conveyor belt - animated (isometric)
-    conveyor: (ctx, w, h, frame, rotation) => {
+    // Conveyor belt - animated with connections (isometric)
+    conveyor: (ctx, w, h, frame, active, overheated, charge, rotation, frozen, moving, state, connections) => {
         const cx = 64, cy = 96;
         const rot = rotation || 0;
+        const conn = connections || { right: false, down: false, left: false, up: false };
 
-        // Belt frame
-        isoCube(ctx, cx, cy, 18, 0, 6, '#444455', '#333344', '#555566');
+        // Count connections to determine belt type
+        const connList = [conn.right, conn.down, conn.left, conn.up];
+        const connCount = connList.filter(c => c).length;
 
-        // Belt surface (animated stripes)
-        const offset = frame % 16;
-        ctx.save();
-        ctx.translate(cx, cy - 6);
+        // Determine if this is a corner piece
+        const isCorner = connCount === 2 &&
+            ((conn.right && conn.down) || (conn.down && conn.left) ||
+             (conn.left && conn.up) || (conn.up && conn.right));
 
-        // Isometric belt top
-        ctx.fillStyle = '#555555';
+        // Belt base/frame
+        ctx.fillStyle = '#333344';
         ctx.beginPath();
-        ctx.moveTo(0, -9);
-        ctx.lineTo(18, 0);
-        ctx.lineTo(0, 9);
-        ctx.lineTo(-18, 0);
+        ctx.moveTo(cx, cy - 3);
+        ctx.lineTo(cx + 20, cy + 7);
+        ctx.lineTo(cx, cy + 17);
+        ctx.lineTo(cx - 20, cy + 7);
         ctx.closePath();
         ctx.fill();
 
-        // Moving stripes
+        // Side walls
+        ctx.fillStyle = '#444455';
+        ctx.beginPath();
+        ctx.moveTo(cx - 20, cy + 7);
+        ctx.lineTo(cx, cy + 17);
+        ctx.lineTo(cx, cy + 12);
+        ctx.lineTo(cx - 18, cy + 4);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#555566';
+        ctx.beginPath();
+        ctx.moveTo(cx + 20, cy + 7);
+        ctx.lineTo(cx, cy + 17);
+        ctx.lineTo(cx, cy + 12);
+        ctx.lineTo(cx + 18, cy + 4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Belt surface
+        ctx.fillStyle = '#444444';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 1);
+        ctx.lineTo(cx + 18, cy + 8);
+        ctx.lineTo(cx, cy + 14);
+        ctx.lineTo(cx - 18, cy + 8);
+        ctx.closePath();
+        ctx.fill();
+
+        // Animated belt stripes
+        const offset = frame % 20;
+        ctx.save();
+        ctx.translate(cx, cy + 6);
+
+        // Clip to belt surface
+        ctx.beginPath();
+        ctx.moveTo(0, -7);
+        ctx.lineTo(16, 2);
+        ctx.lineTo(0, 8);
+        ctx.lineTo(-16, 2);
+        ctx.closePath();
+        ctx.clip();
+
+        // Direction vectors for animation
+        const dirVecs = [
+            { dx: 1, dy: 0.5 },   // 0: right (iso)
+            { dx: -1, dy: 0.5 },  // 1: down (iso)
+            { dx: -1, dy: -0.5 }, // 2: left (iso)
+            { dx: 1, dy: -0.5 }   // 3: up (iso)
+        ];
+        const dir = dirVecs[rot % 4];
+
+        // Draw moving stripes
         ctx.strokeStyle = '#666666';
         ctx.lineWidth = 2;
-        const dirs = [
-            { dx: 1, dy: 0.5 },   // right
-            { dx: -1, dy: 0.5 },  // down
-            { dx: -1, dy: -0.5 }, // left
-            { dx: 1, dy: -0.5 }   // up
-        ];
-        const dir = dirs[rot % 4];
-        for (let i = -2; i < 3; i++) {
-            const stripeOffset = (offset / 16) * 8;
-            const x = i * 6 + (dir.dx * stripeOffset);
-            const y = i * 3 + (dir.dy * stripeOffset);
-            ctx.beginPath();
-            ctx.moveTo(x - 4, y - 2);
-            ctx.lineTo(x + 4, y + 2);
-            ctx.stroke();
+
+        if (isCorner) {
+            // Corner belt - draw curved stripes
+            const cornerOffset = offset / 20;
+            for (let i = 0; i < 5; i++) {
+                const t = (i * 0.2 + cornerOffset) % 1;
+                const angle = t * Math.PI / 2;
+
+                // Determine corner direction based on connections
+                let startAngle = 0;
+                if (conn.right && conn.down) startAngle = 0;
+                else if (conn.down && conn.left) startAngle = Math.PI / 2;
+                else if (conn.left && conn.up) startAngle = Math.PI;
+                else if (conn.up && conn.right) startAngle = -Math.PI / 2;
+
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, startAngle + angle - 0.2, startAngle + angle + 0.2);
+                ctx.stroke();
+            }
+        } else {
+            // Straight belt stripes
+            const stripeOffset = (offset / 20) * 8;
+            for (let i = -3; i < 4; i++) {
+                const x = i * 5 * dir.dx + stripeOffset * dir.dx;
+                const y = i * 5 * dir.dy + stripeOffset * dir.dy;
+                ctx.beginPath();
+                ctx.moveTo(x - 3 * dir.dy, y + 3 * dir.dx);
+                ctx.lineTo(x + 3 * dir.dy, y - 3 * dir.dx);
+                ctx.stroke();
+            }
         }
+
         ctx.restore();
 
-        // Direction arrow
-        ctx.fillStyle = '#ffff00';
-        const arrowDirs = [[10, 0], [0, 5], [-10, 0], [0, -5]];
-        const ad = arrowDirs[rot % 4];
+        // Connection indicators (small bumps where belt connects)
+        ctx.fillStyle = '#777788';
+        if (conn.right) {
+            ctx.beginPath();
+            ctx.arc(cx + 16, cy + 6, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if (conn.down) {
+            ctx.beginPath();
+            ctx.arc(cx - 2, cy + 12, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if (conn.left) {
+            ctx.beginPath();
+            ctx.arc(cx - 16, cy + 6, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        if (conn.up) {
+            ctx.beginPath();
+            ctx.arc(cx + 2, cy, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Direction arrow (yellow, pointing output direction)
+        ctx.fillStyle = '#ffcc00';
+        const arrowPos = [
+            { x: 12, y: 5 },   // right
+            { x: -4, y: 10 },  // down
+            { x: -12, y: 5 },  // left
+            { x: 4, y: 0 }     // up
+        ];
+        const arrowRots = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+        const ap = arrowPos[rot % 4];
+
+        ctx.save();
+        ctx.translate(cx + ap.x, cy + ap.y);
+        ctx.rotate(arrowRots[rot % 4]);
         ctx.beginPath();
-        ctx.moveTo(cx, cy - 6);
-        ctx.lineTo(cx + ad[0], cy - 6 + ad[1]);
-        ctx.lineTo(cx + ad[0] * 0.5 - ad[1] * 0.3, cy - 6 + ad[1] * 0.5 + ad[0] * 0.3);
+        ctx.moveTo(6, 0);
+        ctx.lineTo(-2, -4);
+        ctx.lineTo(-2, 4);
         ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Rollers on sides
+        ctx.fillStyle = '#555566';
+        ctx.beginPath();
+        ctx.ellipse(cx - 15, cy + 8, 2, 4, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + 15, cy + 8, 2, 4, -Math.PI / 4, 0, Math.PI * 2);
         ctx.fill();
     },
 
@@ -2581,14 +2694,17 @@ function drawSprite(type, x, y, options = {}) {
 
     spriteFunc(tempCtx, size, size, animationFrame,
         options.active, options.overheated, options.charge,
-        options.rotation, options.frozen, options.moving, options.state);
+        options.rotation, options.frozen, options.moving, options.state,
+        options.connections);
 
-    const scale = game.camera.zoom;
+    // Scale sprites to better fill tile space (1.4x larger)
+    const scale = game.camera.zoom * 1.4;
+    const drawSize = size * scale;
     ctx.drawImage(tempCanvas,
-        x - (size * scale) / 2,
-        y - (size * scale) * 0.75,
-        size * scale,
-        size * scale);
+        x - drawSize / 2,
+        y - drawSize * 0.75,
+        drawSize,
+        drawSize);
 }
 
 // ==================== THEME SELECTION ====================
@@ -3057,6 +3173,43 @@ function getMachineAt(x, y) {
     return game.machines.find(m => m.x === x && m.y === y);
 }
 
+// Get conveyor connections to neighboring conveyors/machines
+function getConveyorConnections(conveyor) {
+    // Directions: 0=right, 1=down, 2=left, 3=up (in isometric terms)
+    const dirs = [
+        { dx: 1, dy: 0 },  // 0: right
+        { dx: 0, dy: 1 },  // 1: down
+        { dx: -1, dy: 0 }, // 2: left
+        { dx: 0, dy: -1 }  // 3: up
+    ];
+
+    const connections = { right: false, down: false, left: false, up: false };
+    const names = ['right', 'down', 'left', 'up'];
+
+    dirs.forEach((dir, i) => {
+        const nx = wrapCoord(conveyor.x + dir.dx);
+        const ny = wrapCoord(conveyor.y + dir.dy);
+        const neighbor = getMachineAt(nx, ny);
+
+        if (neighbor) {
+            // Connect to other conveyors
+            if (neighbor.type === 'conveyor') {
+                connections[names[i]] = true;
+            }
+            // Connect to machines that output is pointing to (our output direction)
+            else if (i === conveyor.rotation % 4) {
+                connections[names[i]] = true;
+            }
+            // Connect from machines behind us (our input)
+            else if (i === (conveyor.rotation + 2) % 4) {
+                connections[names[i]] = true;
+            }
+        }
+    });
+
+    return connections;
+}
+
 function isAdjacent(x1, y1, x2, y2) {
     const dx = Math.abs(x1 - x2);
     const dy = Math.abs(y1 - y2);
@@ -3214,6 +3367,9 @@ function placeMachine(type, x, y) {
     }
 
     notify(`Placed ${def.name}`);
+
+    // Update context panel to show placed machine
+    showMachineInfo(machine);
 }
 
 // ==================== ROBOT MOVEMENT ====================
@@ -3925,12 +4081,19 @@ function render() {
 
         // Draw sprite based on machine type
         if (SPRITES[m.type]) {
-            drawSprite(m.type, screen.x, screen.y, {
+            const spriteOptions = {
                 active: m.active,
                 overheated: m.temperature > 80,
                 charge: m.stored || 0,
                 rotation: m.rotation || 0
-            });
+            };
+
+            // For conveyors, calculate connections to neighbors
+            if (m.type === 'conveyor') {
+                spriteOptions.connections = getConveyorConnections(m);
+            }
+
+            drawSprite(m.type, screen.x, screen.y, spriteOptions);
         } else {
             // Fallback for machines without sprites
             ctx.fillStyle = m.onFire ? '#ff4400' :
@@ -4353,15 +4516,19 @@ function pickupMachine(index) {
     const machine = game.machines[index];
     if (!machine) return;
 
-    // Return some materials
+    // Return all materials
     const def = MACHINES[machine.type];
     for (const [resource, count] of Object.entries(def.cost)) {
-        addToInventory(resource, Math.floor(count * 0.5));
+        addToInventory(resource, count);
     }
 
     game.machines.splice(index, 1);
     closeMachineMenu();
     notify(`Picked up ${def.name}`);
+
+    // Clear context panel
+    const info = document.getElementById('selectedInfo');
+    info.innerHTML = '<p style="color: #888;">Click a machine to see details</p>';
 }
 
 // ==================== RESOURCE GATHERING ====================
