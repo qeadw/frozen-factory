@@ -1364,853 +1364,1042 @@ function createSprite(width, height, drawFunc) {
     return offscreen;
 }
 
-// Pixel art helper - draw a pixel
-function px(ctx, x, y, color, size = 1) {
+// ==================== ISOMETRIC SPRITE HELPERS ====================
+// Draw an isometric cube/box
+function isoCube(ctx, cx, cy, w, h, d, topCol, leftCol, rightCol) {
+    // Top face (diamond)
+    ctx.fillStyle = topCol;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - h);
+    ctx.lineTo(cx + w, cy - h + w/2);
+    ctx.lineTo(cx, cy - h + w);
+    ctx.lineTo(cx - w, cy - h + w/2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Left face
+    ctx.fillStyle = leftCol;
+    ctx.beginPath();
+    ctx.moveTo(cx - w, cy - h + w/2);
+    ctx.lineTo(cx, cy - h + w);
+    ctx.lineTo(cx, cy + d);
+    ctx.lineTo(cx - w, cy + d - w/2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Right face
+    ctx.fillStyle = rightCol;
+    ctx.beginPath();
+    ctx.moveTo(cx + w, cy - h + w/2);
+    ctx.lineTo(cx, cy - h + w);
+    ctx.lineTo(cx, cy + d);
+    ctx.lineTo(cx + w, cy + d - w/2);
+    ctx.closePath();
+    ctx.fill();
+}
+
+// Draw isometric flat top surface (diamond)
+function isoTop(ctx, cx, cy, w, color) {
     ctx.fillStyle = color;
-    ctx.fillRect(x * size, y * size, size, size);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - w/2);
+    ctx.lineTo(cx + w, cy);
+    ctx.lineTo(cx, cy + w/2);
+    ctx.lineTo(cx - w, cy);
+    ctx.closePath();
+    ctx.fill();
+}
+
+// Draw isometric cylinder
+function isoCylinder(ctx, cx, cy, r, h, topCol, sideCol) {
+    // Side
+    ctx.fillStyle = sideCol;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, r, r/2, 0, 0, Math.PI);
+    ctx.lineTo(cx - r, cy - h);
+    ctx.ellipse(cx, cy - h, r, r/2, 0, Math.PI, 0, true);
+    ctx.closePath();
+    ctx.fill();
+
+    // Top ellipse
+    ctx.fillStyle = topCol;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - h, r, r/2, 0, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 // ==================== MACHINE SPRITES ====================
 const SPRITES = {
-    // Solar Panel - blue panels with metal frame
+    // Solar Panel - tilted panel on stand
     solar_panel: (ctx, w, h, frame, isDay) => {
-        const s = 2; // pixel size
-        // Base platform
-        for (let x = 4; x < 28; x++) {
-            for (let y = 20; y < 24; y++) {
-                px(ctx, x, y, '#445566', s);
-            }
-        }
-        // Panel frame
-        for (let x = 2; x < 30; x++) {
-            px(ctx, x, 8, '#667788', s);
-            px(ctx, x, 18, '#556677', s);
-        }
-        for (let y = 8; y < 19; y++) {
-            px(ctx, 2, y, '#667788', s);
-            px(ctx, 29, y, '#556677', s);
-        }
-        // Solar cells - animate glow during day
-        const glow = isDay ? Math.sin(frame * 0.1) * 20 : 0;
-        for (let x = 4; x < 28; x++) {
-            for (let y = 10; y < 17; y++) {
-                const cellColor = isDay ?
-                    `rgb(${40 + glow}, ${100 + glow}, ${180 + glow})` : '#334455';
-                px(ctx, x, y, cellColor, s);
-                // Grid lines
-                if (x % 6 === 0 || y % 3 === 0) {
-                    px(ctx, x, y, '#223344', s);
-                }
-            }
-        }
-        // Shine effect during day
-        if (isDay && frame % 30 < 15) {
-            px(ctx, 6, 11, '#aaddff', s);
-            px(ctx, 7, 11, '#88bbdd', s);
-        }
-    },
+        const cx = 32, cy = 48;
 
-    // Miner - drilling machine
-    miner: (ctx, w, h, frame, active) => {
-        const s = 2;
+        // Support post
+        isoCube(ctx, cx, cy + 8, 4, 0, 20, '#556677', '#445566', '#667788');
+
         // Base
-        for (let x = 6; x < 26; x++) {
-            for (let y = 18; y < 26; y++) {
-                px(ctx, x, y, '#886644', s);
-            }
+        isoTop(ctx, cx, cy + 12, 12, '#445566');
+
+        // Panel frame (tilted)
+        ctx.fillStyle = '#667788';
+        ctx.beginPath();
+        ctx.moveTo(cx - 20, cy - 8);
+        ctx.lineTo(cx + 20, cy - 8);
+        ctx.lineTo(cx + 18, cy - 20);
+        ctx.lineTo(cx - 18, cy - 20);
+        ctx.closePath();
+        ctx.fill();
+
+        // Solar cells
+        const glow = isDay ? Math.sin(frame * 0.1) * 30 : 0;
+        const cellColor = isDay ? `rgb(${50 + glow}, ${120 + glow}, ${200 + glow})` : '#334466';
+        ctx.fillStyle = cellColor;
+        ctx.beginPath();
+        ctx.moveTo(cx - 17, cy - 9);
+        ctx.lineTo(cx + 17, cy - 9);
+        ctx.lineTo(cx + 15, cy - 18);
+        ctx.lineTo(cx - 15, cy - 18);
+        ctx.closePath();
+        ctx.fill();
+
+        // Grid lines
+        ctx.strokeStyle = '#223344';
+        ctx.lineWidth = 1;
+        for (let i = -12; i <= 12; i += 6) {
+            ctx.beginPath();
+            ctx.moveTo(cx + i, cy - 9);
+            ctx.lineTo(cx + i * 0.9, cy - 18);
+            ctx.stroke();
         }
-        // Body
-        for (let x = 8; x < 24; x++) {
-            for (let y = 8; y < 18; y++) {
-                px(ctx, x, y, '#aa8866', s);
-            }
+
+        // Shine when day
+        if (isDay && frame % 40 < 20) {
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.fillRect(cx - 10, cy - 16, 6, 3);
         }
-        // Drill head - animate rotation
-        const drillOffset = active ? (frame % 4) : 0;
-        for (let y = 0; y < 8; y++) {
-            const drillWidth = 4 - Math.floor(y / 2);
-            for (let x = -drillWidth; x <= drillWidth; x++) {
-                const shade = ((x + y + drillOffset) % 2 === 0) ? '#888888' : '#666666';
-                px(ctx, 16 + x, y, shade, s);
-            }
-        }
-        // Gears on side
-        if (active) {
-            const gearFrame = frame % 8;
-            px(ctx, 6, 12 + (gearFrame % 2), '#ffaa00', s);
-            px(ctx, 25, 12 + ((gearFrame + 1) % 2), '#ffaa00', s);
-        }
-        // Status light
-        px(ctx, 16, 10, active ? '#44ff44' : '#ff4444', s);
     },
 
-    // Furnace - smelting with fire
+    // Miner - drilling machine (isometric)
+    miner: (ctx, w, h, frame, active) => {
+        const cx = 32, cy = 48;
+
+        // Base platform
+        isoCube(ctx, cx, cy, 16, 0, 8, '#886644', '#775533', '#997755');
+
+        // Main body
+        isoCube(ctx, cx, cy - 8, 12, 0, 16, '#aa8866', '#997755', '#bb9977');
+
+        // Drill tower
+        isoCube(ctx, cx, cy - 24, 6, 0, 12, '#888888', '#666666', '#999999');
+
+        // Drill bit (rotating)
+        const drillRot = active ? frame * 0.3 : 0;
+        ctx.save();
+        ctx.translate(cx, cy - 36);
+        ctx.rotate(drillRot);
+        ctx.fillStyle = '#777777';
+        ctx.beginPath();
+        ctx.moveTo(0, -12);
+        ctx.lineTo(-4, 0);
+        ctx.lineTo(4, 0);
+        ctx.closePath();
+        ctx.fill();
+        // Drill spiral
+        ctx.strokeStyle = active ? '#aaaaaa' : '#666666';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < 3; i++) {
+            ctx.moveTo(-3 + i, -10 + i * 3);
+            ctx.lineTo(3 - i, -8 + i * 3);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // Status light
+        ctx.fillStyle = active ? '#44ff44' : '#ff4444';
+        ctx.beginPath();
+        ctx.arc(cx + 8, cy - 16, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sparks when active
+        if (active && frame % 6 < 3) {
+            ctx.fillStyle = '#ffaa00';
+            ctx.fillRect(cx - 2 + (frame % 4), cy - 40, 2, 2);
+        }
+    },
+
+    // Furnace - smelting with fire (isometric)
     furnace: (ctx, w, h, frame, active) => {
-        const s = 2;
+        const cx = 32, cy = 48;
+
         // Stone base
-        for (let x = 4; x < 28; x++) {
-            for (let y = 12; y < 28; y++) {
-                const shade = ((x + y) % 3 === 0) ? '#776655' : '#665544';
-                px(ctx, x, y, shade, s);
-            }
-        }
-        // Opening
-        for (let x = 10; x < 22; x++) {
-            for (let y = 16; y < 24; y++) {
-                px(ctx, x, y, '#221111', s);
-            }
-        }
+        isoCube(ctx, cx, cy, 18, 0, 20, '#776655', '#665544', '#887766');
+
+        // Chimney
+        isoCube(ctx, cx + 10, cy - 20, 5, 0, 24, '#665544', '#554433', '#776655');
+
+        // Fire opening (dark hole on front)
+        ctx.fillStyle = '#221111';
+        ctx.beginPath();
+        ctx.moveTo(cx - 8, cy);
+        ctx.lineTo(cx + 8, cy);
+        ctx.lineTo(cx + 8, cy - 10);
+        ctx.lineTo(cx - 8, cy - 10);
+        ctx.closePath();
+        ctx.fill();
+
         // Fire inside when active
         if (active) {
             const fireColors = ['#ff4400', '#ff6600', '#ffaa00', '#ffcc00'];
-            for (let i = 0; i < 8; i++) {
-                const fx = 12 + Math.floor(Math.random() * 8);
-                const fy = 17 + Math.floor(Math.random() * 5);
-                const fc = fireColors[(frame + i) % fireColors.length];
-                px(ctx, fx, fy, fc, s);
+            for (let i = 0; i < 5; i++) {
+                const fx = cx - 5 + (i * 3);
+                const fy = cy - 3 - Math.sin(frame * 0.5 + i) * 4;
+                ctx.fillStyle = fireColors[(frame + i) % fireColors.length];
+                ctx.beginPath();
+                ctx.arc(fx, fy, 3, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
-        // Chimney
-        for (let x = 20; x < 26; x++) {
-            for (let y = 2; y < 12; y++) {
-                px(ctx, x, y, '#554433', s);
-            }
-        }
+
         // Smoke when active
         if (active) {
-            const smokeY = 2 - (frame % 8);
-            if (smokeY > -4) {
-                px(ctx, 22 + (frame % 3), smokeY, 'rgba(100,100,100,0.5)', s);
-                px(ctx, 23, smokeY - 1, 'rgba(80,80,80,0.3)', s);
-            }
-        }
-    },
-
-    // Heater - glowing heating element
-    heater: (ctx, w, h, frame, active, overheated) => {
-        const s = 2;
-        // Metal casing
-        for (let x = 6; x < 26; x++) {
-            for (let y = 8; y < 26; y++) {
-                px(ctx, x, y, '#555566', s);
-            }
-        }
-        // Vents
-        for (let y = 10; y < 24; y += 3) {
-            for (let x = 8; x < 24; x++) {
-                px(ctx, x, y, '#333344', s);
-            }
-        }
-        // Heating coils - glow when active
-        if (active) {
-            const glowIntensity = overheated ? 255 : 150 + Math.sin(frame * 0.2) * 50;
-            const coilColor = overheated ?
-                `rgb(255, ${100 + (frame % 50)}, 0)` :
-                `rgb(${glowIntensity}, ${glowIntensity * 0.3}, 0)`;
-            for (let y = 12; y < 22; y += 2) {
-                for (let x = 10; x < 22; x++) {
-                    px(ctx, x, y, coilColor, s);
-                }
-            }
-            // Heat waves
-            if (frame % 10 < 5) {
-                px(ctx, 14 + (frame % 4), 6, 'rgba(255,100,0,0.3)', s);
-                px(ctx, 16 + (frame % 3), 4, 'rgba(255,100,0,0.2)', s);
-            }
-        }
-    },
-
-    // Battery - power storage
-    battery: (ctx, w, h, frame, chargePercent) => {
-        const s = 2;
-        // Outer casing
-        for (let x = 8; x < 24; x++) {
-            for (let y = 4; y < 28; y++) {
-                px(ctx, x, y, '#334433', s);
-            }
-        }
-        // Terminal
-        for (let x = 12; x < 20; x++) {
-            for (let y = 2; y < 5; y++) {
-                px(ctx, x, y, '#666666', s);
-            }
-        }
-        // Charge level
-        const chargeHeight = Math.floor((chargePercent / 100) * 18);
-        const chargeColor = chargePercent > 50 ? '#44ff44' :
-                           chargePercent > 25 ? '#ffff44' : '#ff4444';
-        for (let x = 10; x < 22; x++) {
-            for (let y = 24 - chargeHeight; y < 24; y++) {
-                px(ctx, x, y, chargeColor, s);
-            }
-        }
-        // Charge indicator segments
-        for (let y = 8; y < 24; y += 4) {
-            px(ctx, 10, y, '#223322', s);
-            px(ctx, 21, y, '#223322', s);
-        }
-    },
-
-    // Conveyor belt - animated
-    conveyor: (ctx, w, h, frame, rotation) => {
-        const s = 2;
-        // Belt base
-        for (let x = 4; x < 28; x++) {
-            for (let y = 14; y < 22; y++) {
-                px(ctx, x, y, '#444444', s);
-            }
-        }
-        // Belt surface with moving pattern
-        const offset = frame % 8;
-        for (let x = 4; x < 28; x++) {
-            for (let y = 15; y < 21; y++) {
-                const pattern = ((x + offset) % 4 < 2) ? '#555555' : '#666666';
-                px(ctx, x, y, pattern, s);
-            }
-        }
-        // Direction arrow
-        const arrowX = 16;
-        const dirs = [[1,0], [0,1], [-1,0], [0,-1]];
-        const dir = dirs[rotation % 4];
-        px(ctx, arrowX, 18, '#ffff00', s);
-        px(ctx, arrowX + dir[0] * 2, 18 + dir[1] * 2, '#ffff00', s);
-        px(ctx, arrowX + dir[0] * 4, 18 + dir[1] * 4, '#ffff00', s);
-        // Side rails
-        for (let x = 4; x < 28; x++) {
-            px(ctx, x, 13, '#666677', s);
-            px(ctx, x, 22, '#555566', s);
-        }
-    },
-
-    // Storage crate
-    storage: (ctx, w, h, frame, fillPercent) => {
-        const s = 2;
-        // Wooden crate
-        for (let x = 4; x < 28; x++) {
-            for (let y = 8; y < 28; y++) {
-                const plank = ((x + y) % 8 < 4) ? '#aa7744' : '#996633';
-                px(ctx, x, y, plank, s);
-            }
-        }
-        // Metal corners
-        for (let i = 0; i < 4; i++) {
-            px(ctx, 4 + i, 8, '#888888', s);
-            px(ctx, 24 + i, 8, '#888888', s);
-            px(ctx, 4 + i, 27, '#777777', s);
-            px(ctx, 24 + i, 27, '#777777', s);
-        }
-        // Fill indicator
-        if (fillPercent > 0) {
-            const items = Math.floor(fillPercent / 25);
-            for (let i = 0; i < items; i++) {
-                px(ctx, 10 + i * 4, 16, '#ffcc44', s);
-                px(ctx, 10 + i * 4, 17, '#ddaa22', s);
-            }
-        }
-    },
-
-    // Generator
-    generator: (ctx, w, h, frame, active) => {
-        const s = 2;
-        // Main body
-        for (let x = 4; x < 28; x++) {
-            for (let y = 10; y < 28; y++) {
-                px(ctx, x, y, '#445566', s);
-            }
-        }
-        // Engine block
-        for (let x = 8; x < 24; x++) {
-            for (let y = 12; y < 22; y++) {
-                px(ctx, x, y, '#334455', s);
-            }
-        }
-        // Exhaust pipe
-        for (let x = 24; x < 30; x++) {
-            for (let y = 6; y < 12; y++) {
-                px(ctx, x, y, '#333333', s);
-            }
-        }
-        // Spinning parts when active
-        if (active) {
-            const spin = frame % 4;
-            px(ctx, 16 + spin, 16, '#ffcc00', s);
-            px(ctx, 16 - spin, 18, '#ffcc00', s);
-            // Exhaust smoke
-            if (frame % 6 < 3) {
-                px(ctx, 27, 4 - (frame % 4), '#666666', s);
-            }
-        }
-        // Status light
-        px(ctx, 6, 12, active ? '#44ff44' : '#ff4444', s);
-    },
-
-    // Robot player
-    robot: (ctx, w, h, frame, frozen, moving) => {
-        const s = 2;
-        const bobY = moving ? Math.sin(frame * 0.5) * 2 : 0;
-
-        // Shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath();
-        ctx.ellipse(16 * s, 28 * s, 8 * s, 3 * s, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Legs
-        const legOffset = moving ? Math.sin(frame * 0.5) * 2 : 0;
-        px(ctx, 12, 24 + legOffset, frozen ? '#6688aa' : '#446644', s);
-        px(ctx, 12, 26, frozen ? '#5577aa' : '#335533', s);
-        px(ctx, 19, 24 - legOffset, frozen ? '#6688aa' : '#446644', s);
-        px(ctx, 19, 26, frozen ? '#5577aa' : '#335533', s);
-
-        // Body
-        const bodyColor = frozen ? '#88aacc' : '#55aa55';
-        for (let x = 10; x < 22; x++) {
-            for (let y = 14; y < 24; y++) {
-                px(ctx, x, y + bobY, bodyColor, s);
-            }
-        }
-
-        // Chest panel
-        for (let x = 12; x < 20; x++) {
-            for (let y = 16; y < 20; y++) {
-                px(ctx, x, y + bobY, '#223322', s);
-            }
-        }
-        // Chest lights
-        px(ctx, 14, 17 + bobY, frozen ? '#4466ff' : '#44ff44', s);
-        px(ctx, 17, 17 + bobY, frozen ? '#4466ff' : '#44ff44', s);
-
-        // Head
-        for (let x = 11; x < 21; x++) {
-            for (let y = 6; y < 14; y++) {
-                px(ctx, x, y + bobY, bodyColor, s);
-            }
-        }
-
-        // Eyes
-        const eyeColor = frozen ? '#4488ff' : '#ffff44';
-        px(ctx, 13, 9 + bobY, eyeColor, s);
-        px(ctx, 14, 9 + bobY, eyeColor, s);
-        px(ctx, 17, 9 + bobY, eyeColor, s);
-        px(ctx, 18, 9 + bobY, eyeColor, s);
-
-        // Antenna
-        px(ctx, 16, 4 + bobY, '#888888', s);
-        px(ctx, 16, 2 + bobY, frozen ? '#4488ff' : '#ff4444', s);
-
-        // Arms
-        const armY = 16 + bobY;
-        px(ctx, 8, armY, bodyColor, s);
-        px(ctx, 8, armY + 2, bodyColor, s);
-        px(ctx, 23, armY, bodyColor, s);
-        px(ctx, 23, armY + 2, bodyColor, s);
-
-        // Ice crystals if frozen
-        if (frozen) {
-            px(ctx, 10, 8, '#aaddff', s);
-            px(ctx, 21, 12, '#88ccff', s);
-            px(ctx, 9, 20, '#aaddff', s);
-        }
-    },
-
-    // Fire effect
-    fire: (ctx, w, h, frame) => {
-        const s = 2;
-        const fireColors = ['#ff2200', '#ff4400', '#ff6600', '#ff8800', '#ffaa00', '#ffcc00'];
-
-        for (let i = 0; i < 12; i++) {
-            const fx = 8 + Math.floor(Math.random() * 16);
-            const fy = 8 + Math.floor(Math.random() * 16);
-            const fi = (frame + i) % fireColors.length;
-            px(ctx, fx, fy, fireColors[fi], s);
-        }
-        // Core
-        for (let x = 12; x < 20; x++) {
-            for (let y = 16; y < 24; y++) {
-                px(ctx, x, y, '#ffcc00', s);
-            }
-        }
-    },
-
-    // Light
-    light: (ctx, w, h, frame, active) => {
-        const s = 2;
-        // Post
-        for (let y = 12; y < 28; y++) {
-            px(ctx, 15, y, '#555555', s);
-            px(ctx, 16, y, '#666666', s);
-        }
-        // Lamp housing
-        for (let x = 10; x < 22; x++) {
-            for (let y = 6; y < 12; y++) {
-                px(ctx, x, y, '#444444', s);
-            }
-        }
-        // Light bulb
-        if (active) {
-            const glow = 200 + Math.sin(frame * 0.1) * 30;
-            ctx.fillStyle = `rgba(255, 255, ${glow}, 0.8)`;
-            ctx.beginPath();
-            ctx.arc(16 * s, 9 * s, 4 * s, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    },
-
-    // Landing pad
-    landing_pad: (ctx, w, h, frame, active) => {
-        const s = 2;
-        // Platform
-        for (let x = 2; x < 30; x++) {
-            for (let y = 16; y < 28; y++) {
-                const stripe = ((x + y) % 8 < 4) ? '#666666' : '#555555';
-                px(ctx, x, y, stripe, s);
-            }
-        }
-        // Warning stripes
-        for (let x = 2; x < 30; x++) {
-            const hazard = (x % 4 < 2) ? '#ffcc00' : '#222222';
-            px(ctx, x, 16, hazard, s);
-            px(ctx, x, 27, hazard, s);
-        }
-        // Landing lights
-        if (active) {
-            const blink = (frame % 20) < 10;
-            px(ctx, 4, 20, blink ? '#ff0000' : '#440000', s);
-            px(ctx, 27, 20, blink ? '#ff0000' : '#440000', s);
-            px(ctx, 4, 24, blink ? '#00ff00' : '#004400', s);
-            px(ctx, 27, 24, blink ? '#00ff00' : '#004400', s);
-        }
-        // Center H
-        for (let y = 18; y < 26; y++) {
-            px(ctx, 12, y, '#ffffff', s);
-            px(ctx, 19, y, '#ffffff', s);
-        }
-        for (let x = 12; x < 20; x++) {
-            px(ctx, x, 22, '#ffffff', s);
-        }
-    },
-
-    // Extinguisher station
-    extinguisher: (ctx, w, h, frame, active) => {
-        const s = 2;
-        // Cabinet
-        for (let x = 6; x < 26; x++) {
-            for (let y = 6; y < 26; y++) {
-                px(ctx, x, y, '#cc2222', s);
-            }
-        }
-        // Door
-        for (let x = 8; x < 24; x++) {
-            for (let y = 8; y < 24; y++) {
-                px(ctx, x, y, '#aa1111', s);
-            }
-        }
-        // Glass window
-        for (let x = 10; x < 22; x++) {
-            for (let y = 10; y < 18; y++) {
-                px(ctx, x, y, 'rgba(200,230,255,0.5)', s);
-            }
-        }
-        // Extinguisher inside
-        px(ctx, 15, 12, '#ff0000', s);
-        px(ctx, 16, 12, '#ff0000', s);
-        px(ctx, 15, 14, '#ff0000', s);
-        px(ctx, 16, 14, '#ff0000', s);
-        // Spray effect when active
-        if (active) {
-            for (let i = 0; i < 6; i++) {
-                const sx = 16 + (Math.random() - 0.5) * 20;
-                const sy = 16 + (Math.random() - 0.5) * 20;
-                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillStyle = 'rgba(100,100,100,0.5)';
+            for (let i = 0; i < 3; i++) {
+                const sy = cy - 44 - ((frame * 2 + i * 8) % 20);
+                const sx = cx + 10 + Math.sin(frame * 0.1 + i) * 3;
                 ctx.beginPath();
-                ctx.arc(sx * s, sy * s, 3, 0, Math.PI * 2);
+                ctx.arc(sx, sy, 3 + i, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
     },
 
-    // Heat sink
-    heat_sink: (ctx, w, h, frame) => {
-        const s = 2;
-        // Fins
-        for (let i = 0; i < 6; i++) {
-            const x = 6 + i * 4;
-            for (let y = 8; y < 24; y++) {
-                px(ctx, x, y, '#7788aa', s);
-                px(ctx, x + 1, y, '#8899bb', s);
-            }
+    // Heater - glowing heating element (isometric)
+    heater: (ctx, w, h, frame, active, overheated) => {
+        const cx = 32, cy = 48;
+
+        // Metal casing
+        isoCube(ctx, cx, cy, 14, 0, 22, '#555566', '#444455', '#666677');
+
+        // Vents on front
+        ctx.fillStyle = '#333344';
+        for (let i = 0; i < 4; i++) {
+            ctx.fillRect(cx - 10, cy - 4 - i * 5, 20, 2);
         }
-        // Base plate
-        for (let x = 4; x < 28; x++) {
-            for (let y = 24; y < 28; y++) {
-                px(ctx, x, y, '#556677', s);
+
+        // Heating coils glow
+        if (active) {
+            const glowIntensity = overheated ? 1 : 0.5 + Math.sin(frame * 0.2) * 0.3;
+            const r = overheated ? 255 : 200;
+            const g = overheated ? 100 + (frame % 50) : 80;
+            ctx.fillStyle = `rgba(${r}, ${g}, 0, ${glowIntensity})`;
+            ctx.fillRect(cx - 8, cy - 18, 16, 12);
+
+            // Heat waves rising
+            ctx.strokeStyle = `rgba(255, 100, 0, ${0.3 + Math.sin(frame * 0.3) * 0.2})`;
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 3; i++) {
+                const wy = cy - 24 - ((frame + i * 10) % 15);
+                ctx.beginPath();
+                ctx.moveTo(cx - 6 + i * 6, wy);
+                ctx.quadraticCurveTo(cx - 3 + i * 6, wy - 4, cx - 6 + i * 6, wy - 8);
+                ctx.stroke();
             }
         }
     },
 
-    // Fan
-    fan: (ctx, w, h, frame, active) => {
-        const s = 2;
-        // Housing
-        ctx.fillStyle = '#555566';
-        ctx.beginPath();
-        ctx.arc(16 * s, 16 * s, 12 * s, 0, Math.PI * 2);
-        ctx.fill();
-        // Inner
-        ctx.fillStyle = '#333344';
-        ctx.beginPath();
-        ctx.arc(16 * s, 16 * s, 10 * s, 0, Math.PI * 2);
-        ctx.fill();
-        // Blades
-        const rotation = active ? frame * 0.3 : 0;
+    // Battery - power storage (isometric)
+    battery: (ctx, w, h, frame, chargePercent) => {
+        const cx = 32, cy = 48;
+        const charge = chargePercent || 50;
+
+        // Main battery body
+        isoCube(ctx, cx, cy, 10, 0, 28, '#334433', '#223322', '#445544');
+
+        // Terminal on top
+        isoCube(ctx, cx, cy - 28, 5, 0, 4, '#666666', '#555555', '#777777');
+
+        // Charge level indicator (on front face)
+        const chargeHeight = Math.floor((charge / 100) * 20);
+        const chargeColor = charge > 50 ? '#44ff44' : charge > 25 ? '#ffff44' : '#ff4444';
+        ctx.fillStyle = chargeColor;
+        ctx.fillRect(cx - 6, cy - chargeHeight, 12, chargeHeight);
+
+        // Segment lines
+        ctx.strokeStyle = '#223322';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(cx - 6, cy - i * 6);
+            ctx.lineTo(cx + 6, cy - i * 6);
+            ctx.stroke();
+        }
+    },
+
+    // Conveyor belt - animated (isometric)
+    conveyor: (ctx, w, h, frame, rotation) => {
+        const cx = 32, cy = 48;
+        const rot = rotation || 0;
+
+        // Belt frame
+        isoCube(ctx, cx, cy, 18, 0, 6, '#444455', '#333344', '#555566');
+
+        // Belt surface (animated stripes)
+        const offset = frame % 16;
         ctx.save();
-        ctx.translate(16 * s, 16 * s);
-        ctx.rotate(rotation);
-        for (let i = 0; i < 4; i++) {
-            ctx.rotate(Math.PI / 2);
-            ctx.fillStyle = '#667788';
-            ctx.fillRect(-2 * s, -8 * s, 4 * s, 8 * s);
+        ctx.translate(cx, cy - 6);
+
+        // Isometric belt top
+        ctx.fillStyle = '#555555';
+        ctx.beginPath();
+        ctx.moveTo(0, -9);
+        ctx.lineTo(18, 0);
+        ctx.lineTo(0, 9);
+        ctx.lineTo(-18, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // Moving stripes
+        ctx.strokeStyle = '#666666';
+        ctx.lineWidth = 2;
+        const dirs = [
+            { dx: 1, dy: 0.5 },   // right
+            { dx: -1, dy: 0.5 },  // down
+            { dx: -1, dy: -0.5 }, // left
+            { dx: 1, dy: -0.5 }   // up
+        ];
+        const dir = dirs[rot % 4];
+        for (let i = -2; i < 3; i++) {
+            const stripeOffset = (offset / 16) * 8;
+            const x = i * 6 + (dir.dx * stripeOffset);
+            const y = i * 3 + (dir.dy * stripeOffset);
+            ctx.beginPath();
+            ctx.moveTo(x - 4, y - 2);
+            ctx.lineTo(x + 4, y + 2);
+            ctx.stroke();
         }
         ctx.restore();
+
+        // Direction arrow
+        ctx.fillStyle = '#ffff00';
+        const arrowDirs = [[10, 0], [0, 5], [-10, 0], [0, -5]];
+        const ad = arrowDirs[rot % 4];
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - 6);
+        ctx.lineTo(cx + ad[0], cy - 6 + ad[1]);
+        ctx.lineTo(cx + ad[0] * 0.5 - ad[1] * 0.3, cy - 6 + ad[1] * 0.5 + ad[0] * 0.3);
+        ctx.closePath();
+        ctx.fill();
+    },
+
+    // Storage crate (isometric)
+    storage: (ctx, w, h, frame, fillPercent) => {
+        const cx = 32, cy = 48;
+
+        // Wooden crate body
+        isoCube(ctx, cx, cy, 16, 0, 18, '#aa7744', '#886633', '#bb8855');
+
+        // Wood grain lines on front
+        ctx.strokeStyle = '#996633';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(cx - 12, cy - 4 - i * 5);
+            ctx.lineTo(cx + 12, cy - 4 - i * 5);
+            ctx.stroke();
+        }
+
+        // Metal corner brackets
+        ctx.fillStyle = '#888888';
+        ctx.fillRect(cx - 14, cy - 2, 4, 4);
+        ctx.fillRect(cx + 10, cy - 2, 4, 4);
+        ctx.fillRect(cx - 14, cy - 16, 4, 4);
+        ctx.fillRect(cx + 10, cy - 16, 4, 4);
+
+        // Items visible on top if filled
+        if (fillPercent > 0) {
+            const items = Math.min(4, Math.floor((fillPercent || 0) / 25) + 1);
+            for (let i = 0; i < items; i++) {
+                ctx.fillStyle = ['#ffcc44', '#44aaff', '#ff6644', '#44ff88'][i];
+                const ix = cx - 8 + (i % 2) * 10;
+                const iy = cy - 20 + Math.floor(i / 2) * 5;
+                ctx.beginPath();
+                ctx.arc(ix, iy, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    },
+
+    // Generator (isometric)
+    generator: (ctx, w, h, frame, active) => {
+        const cx = 32, cy = 48;
+
+        // Main housing
+        isoCube(ctx, cx, cy, 16, 0, 18, '#445566', '#334455', '#556677');
+
+        // Engine block on top
+        isoCube(ctx, cx - 4, cy - 18, 10, 0, 10, '#556677', '#445566', '#667788');
+
+        // Exhaust pipe
+        isoCylinder(ctx, cx + 12, cy - 18, 4, 16, '#444444', '#333333');
+
+        // Exhaust smoke when active
+        if (active) {
+            ctx.fillStyle = 'rgba(100,100,100,0.4)';
+            for (let i = 0; i < 3; i++) {
+                const sy = cy - 34 - ((frame * 2 + i * 6) % 16);
+                const sx = cx + 12 + Math.sin(frame * 0.1 + i) * 2;
+                ctx.beginPath();
+                ctx.arc(sx, sy, 3 + i, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Spinning flywheel visible through window
+        if (active) {
+            ctx.save();
+            ctx.translate(cx, cy - 8);
+            ctx.rotate(frame * 0.2);
+            ctx.fillStyle = '#ffcc00';
+            for (let i = 0; i < 4; i++) {
+                ctx.rotate(Math.PI / 2);
+                ctx.fillRect(-2, -6, 4, 6);
+            }
+            ctx.restore();
+        }
+
+        // Status light
+        ctx.fillStyle = active ? '#44ff44' : '#ff4444';
+        ctx.beginPath();
+        ctx.arc(cx - 10, cy - 10, 3, 0, Math.PI * 2);
+        ctx.fill();
+    },
+
+    // Robot player (isometric)
+    robot: (ctx, w, h, frame, frozen, moving) => {
+        const cx = 32, cy = 52;
+        const bobY = moving ? Math.sin(frame * 0.5) * 2 : 0;
+        const bodyColor = frozen ? '#88aacc' : '#55aa55';
+        const darkBody = frozen ? '#6688aa' : '#448844';
+        const lightBody = frozen ? '#aaccee' : '#66bb66';
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 4, 12, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Legs (isometric)
+        const legOffset = moving ? Math.sin(frame * 0.5) * 3 : 0;
+        isoCube(ctx, cx - 6, cy + legOffset, 4, 0, 10, darkBody, darkBody, bodyColor);
+        isoCube(ctx, cx + 6, cy - legOffset, 4, 0, 10, darkBody, darkBody, bodyColor);
+
+        // Body (isometric box)
+        isoCube(ctx, cx, cy - 10 + bobY, 10, 0, 14, lightBody, darkBody, bodyColor);
+
+        // Chest panel
+        ctx.fillStyle = frozen ? '#334455' : '#223322';
+        ctx.fillRect(cx - 6, cy - 18 + bobY, 12, 8);
+
+        // Chest lights
+        ctx.fillStyle = frozen ? '#4488ff' : '#44ff44';
+        ctx.beginPath();
+        ctx.arc(cx - 3, cy - 14 + bobY, 2, 0, Math.PI * 2);
+        ctx.arc(cx + 3, cy - 14 + bobY, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Head (isometric box)
+        isoCube(ctx, cx, cy - 28 + bobY, 8, 0, 10, lightBody, darkBody, bodyColor);
+
+        // Eyes
+        ctx.fillStyle = frozen ? '#4488ff' : '#ffff44';
+        ctx.fillRect(cx - 5, cy - 34 + bobY, 3, 3);
+        ctx.fillRect(cx + 2, cy - 34 + bobY, 3, 3);
+
+        // Antenna
+        ctx.fillStyle = '#888888';
+        ctx.fillRect(cx - 1, cy - 42 + bobY, 2, 6);
+        ctx.fillStyle = frozen ? '#4488ff' : '#ff4444';
+        ctx.beginPath();
+        ctx.arc(cx, cy - 44 + bobY, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Arms
+        const armSwing = moving ? Math.sin(frame * 0.5) * 4 : 0;
+        isoCube(ctx, cx - 14, cy - 16 + bobY + armSwing, 3, 0, 10, bodyColor, darkBody, lightBody);
+        isoCube(ctx, cx + 14, cy - 16 + bobY - armSwing, 3, 0, 10, bodyColor, darkBody, lightBody);
+
+        // Ice crystals if frozen
+        if (frozen) {
+            ctx.fillStyle = '#aaddff';
+            ctx.beginPath();
+            ctx.moveTo(cx - 12, cy - 30 + bobY);
+            ctx.lineTo(cx - 15, cy - 35 + bobY);
+            ctx.lineTo(cx - 10, cy - 32 + bobY);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(cx + 10, cy - 20 + bobY);
+            ctx.lineTo(cx + 15, cy - 24 + bobY);
+            ctx.lineTo(cx + 12, cy - 18 + bobY);
+            ctx.fill();
+        }
+    },
+
+    // Fire effect (isometric)
+    fire: (ctx, w, h, frame) => {
+        const cx = 32, cy = 48;
+        const fireColors = ['#ff2200', '#ff4400', '#ff6600', '#ff8800', '#ffaa00', '#ffcc00'];
+
+        // Fire particles rising
+        for (let i = 0; i < 8; i++) {
+            const fx = cx + Math.sin(frame * 0.3 + i * 2) * 10;
+            const fy = cy - 10 - ((frame * 3 + i * 8) % 30);
+            const size = 6 - (i % 4);
+            ctx.fillStyle = fireColors[(frame + i) % fireColors.length];
+            ctx.beginPath();
+            ctx.arc(fx, fy, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Fire base (isometric)
+        ctx.fillStyle = '#ffcc00';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, 12, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+    },
+
+    // Light (isometric)
+    light: (ctx, w, h, frame, active) => {
+        const cx = 32, cy = 48;
+
+        // Base
+        isoTop(ctx, cx, cy + 4, 10, '#444455');
+
+        // Post
+        isoCube(ctx, cx, cy, 3, 0, 24, '#666666', '#555555', '#777777');
+
+        // Lamp housing
+        isoCube(ctx, cx, cy - 28, 10, 0, 8, '#555566', '#444455', '#666677');
+
+        // Light glow
+        if (active) {
+            const glow = 0.6 + Math.sin(frame * 0.1) * 0.2;
+            ctx.fillStyle = `rgba(255, 255, 200, ${glow})`;
+            ctx.beginPath();
+            ctx.arc(cx, cy - 32, 10, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Light cone below
+            ctx.fillStyle = 'rgba(255, 255, 200, 0.2)';
+            ctx.beginPath();
+            ctx.moveTo(cx - 8, cy - 28);
+            ctx.lineTo(cx + 8, cy - 28);
+            ctx.lineTo(cx + 16, cy + 4);
+            ctx.lineTo(cx - 16, cy + 4);
+            ctx.closePath();
+            ctx.fill();
+        }
+    },
+
+    // Landing pad (isometric)
+    landing_pad: (ctx, w, h, frame, active) => {
+        const cx = 32, cy = 48;
+
+        // Main platform (flat isometric)
+        isoTop(ctx, cx, cy, 24, '#555566');
+
+        // Raised edge
+        isoCube(ctx, cx, cy, 24, 0, 4, '#666677', '#555566', '#777788');
+
+        // Warning stripes on edge
+        ctx.strokeStyle = '#ffcc00';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 20, cy);
+        ctx.lineTo(cx, cy - 10);
+        ctx.lineTo(cx + 20, cy);
+        ctx.lineTo(cx, cy + 10);
+        ctx.closePath();
+        ctx.stroke();
+
+        // H marking
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(cx - 8, cy - 4, 3, 8);
+        ctx.fillRect(cx + 5, cy - 4, 3, 8);
+        ctx.fillRect(cx - 5, cy - 1, 10, 2);
+
+        // Landing lights
+        if (active) {
+            const blink = (frame % 20) < 10;
+            const colors = [
+                { x: cx - 18, y: cy, on: '#ff0000', off: '#440000' },
+                { x: cx + 18, y: cy, on: '#ff0000', off: '#440000' },
+                { x: cx, y: cy - 8, on: '#00ff00', off: '#004400' },
+                { x: cx, y: cy + 8, on: '#00ff00', off: '#004400' }
+            ];
+            colors.forEach(light => {
+                ctx.fillStyle = blink ? light.on : light.off;
+                ctx.beginPath();
+                ctx.arc(light.x, light.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+    },
+
+    // Extinguisher station (isometric)
+    extinguisher: (ctx, w, h, frame, active) => {
+        const cx = 32, cy = 48;
+
+        // Red cabinet
+        isoCube(ctx, cx, cy, 12, 0, 24, '#dd3333', '#aa1111', '#ee4444');
+
+        // Glass window on front
+        ctx.fillStyle = 'rgba(200,230,255,0.5)';
+        ctx.fillRect(cx - 8, cy - 18, 16, 12);
+
+        // Extinguisher inside (red cylinder)
+        isoCylinder(ctx, cx, cy - 6, 4, 12, '#ff0000', '#cc0000');
+
+        // Spray effect when active
+        if (active) {
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            for (let i = 0; i < 10; i++) {
+                const angle = (frame * 0.2 + i * 0.6);
+                const dist = 10 + (frame % 10) + i * 2;
+                const sx = cx + Math.cos(angle) * dist;
+                const sy = cy - 10 + Math.sin(angle) * dist * 0.5;
+                ctx.beginPath();
+                ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    },
+
+    // Heat sink (isometric)
+    heat_sink: (ctx, w, h, frame) => {
+        const cx = 32, cy = 48;
+
+        // Base plate
+        isoCube(ctx, cx, cy, 18, 0, 4, '#556677', '#445566', '#667788');
+
+        // Cooling fins (multiple thin boxes)
+        for (let i = 0; i < 5; i++) {
+            const finX = cx - 12 + i * 6;
+            const finY = cy - 4 + i * 1.5 - 3;
+            isoCube(ctx, finX, finY, 2, 0, 16, '#8899bb', '#6677aa', '#99aacc');
+        }
+    },
+
+    // Fan (isometric)
+    fan: (ctx, w, h, frame, active) => {
+        const cx = 32, cy = 48;
+
+        // Base/housing (isometric cylinder shape)
+        isoCube(ctx, cx, cy, 14, 0, 6, '#555566', '#444455', '#666677');
+
+        // Fan cage (circular on top)
+        ctx.strokeStyle = '#667788';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 6, 14, 7, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner dark area
+        ctx.fillStyle = '#222233';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - 6, 12, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Spinning blades
+        const rotation = active ? frame * 0.4 : 0;
+        ctx.save();
+        ctx.translate(cx, cy - 6);
+        for (let i = 0; i < 4; i++) {
+            const angle = rotation + (i * Math.PI / 2);
+            ctx.fillStyle = '#778899';
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(angle) * 10, Math.sin(angle) * 5);
+            ctx.lineTo(Math.cos(angle + 0.3) * 8, Math.sin(angle + 0.3) * 4);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.restore();
+
         // Center hub
         ctx.fillStyle = '#888899';
         ctx.beginPath();
-        ctx.arc(16 * s, 16 * s, 3 * s, 0, Math.PI * 2);
+        ctx.ellipse(cx, cy - 6, 3, 1.5, 0, 0, Math.PI * 2);
         ctx.fill();
     },
 
-    // Sun tracker robot
+    // Sun tracker robot (isometric)
     sun_tracker: (ctx, w, h, frame, state, charge) => {
-        const s = 2;
-        // Wheels
-        px(ctx, 8, 24, '#333333', s);
-        px(ctx, 8, 26, '#333333', s);
-        px(ctx, 23, 24, '#333333', s);
-        px(ctx, 23, 26, '#333333', s);
+        const cx = 32, cy = 48;
+
+        // Wheels (4 small cylinders)
+        isoCylinder(ctx, cx - 10, cy + 4, 4, 4, '#444444', '#333333');
+        isoCylinder(ctx, cx + 10, cy + 4, 4, 4, '#444444', '#333333');
+        isoCylinder(ctx, cx - 10, cy - 4, 4, 4, '#444444', '#333333');
+        isoCylinder(ctx, cx + 10, cy - 4, 4, 4, '#444444', '#333333');
+
         // Body
-        for (let x = 10; x < 22; x++) {
-            for (let y = 18; y < 26; y++) {
-                px(ctx, x, y, '#ffcc44', s);
-            }
-        }
-        // Solar panel on top
-        const tilt = Math.sin(frame * 0.05) * 2;
-        for (let x = 6; x < 26; x++) {
-            for (let y = 8; y < 16; y++) {
-                px(ctx, x, y + tilt, '#4488cc', s);
-            }
-        }
-        // Charge indicator
-        const chargeWidth = Math.floor((charge / 100) * 8);
-        for (let x = 0; x < chargeWidth; x++) {
-            px(ctx, 12 + x, 20, '#44ff44', s);
-        }
+        isoCube(ctx, cx, cy, 12, 0, 10, '#ffcc44', '#ddaa22', '#ffdd66');
+
+        // Solar panel on arm (tilts to track sun)
+        const tilt = Math.sin(frame * 0.05) * 5;
+        ctx.fillStyle = '#4488cc';
+        ctx.beginPath();
+        ctx.moveTo(cx - 16, cy - 14 + tilt);
+        ctx.lineTo(cx + 16, cy - 14 - tilt);
+        ctx.lineTo(cx + 14, cy - 20 - tilt);
+        ctx.lineTo(cx - 14, cy - 20 + tilt);
+        ctx.closePath();
+        ctx.fill();
+
+        // Panel frame
+        ctx.strokeStyle = '#336699';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Charge bar
+        const chargeWidth = Math.floor(((charge || 0) / 100) * 16);
+        ctx.fillStyle = '#223322';
+        ctx.fillRect(cx - 8, cy - 4, 16, 4);
+        ctx.fillStyle = '#44ff44';
+        ctx.fillRect(cx - 8, cy - 4, chargeWidth, 4);
+
         // State indicator
         const stateColor = state === 'collecting' ? '#ffff00' :
                           state === 'returning' ? '#ff8800' : '#888888';
-        px(ctx, 16, 16, stateColor, s);
+        ctx.fillStyle = stateColor;
+        ctx.beginPath();
+        ctx.arc(cx, cy - 8, 3, 0, Math.PI * 2);
+        ctx.fill();
     },
 
-    // Water miner - drills into ice
+    // Water miner (isometric)
     water_miner: (ctx, w, h, frame, active) => {
-        const s = 2;
-        // Ice platform base
-        for (let x = 4; x < 28; x++) {
-            for (let y = 22; y < 28; y++) {
-                const iceShade = ((x + y) % 2 === 0) ? '#aaddff' : '#88ccee';
-                px(ctx, x, y, iceShade, s);
-            }
-        }
+        const cx = 32, cy = 48;
+
+        // Ice platform
+        isoTop(ctx, cx, cy + 4, 18, '#88ccee');
+        ctx.fillStyle = '#aaddff';
+        ctx.beginPath();
+        ctx.moveTo(cx - 12, cy + 2);
+        ctx.lineTo(cx, cy + 8);
+        ctx.lineTo(cx + 12, cy + 2);
+        ctx.lineTo(cx, cy - 4);
+        ctx.closePath();
+        ctx.fill();
+
         // Main body
-        for (let x = 8; x < 24; x++) {
-            for (let y = 10; y < 22; y++) {
-                px(ctx, x, y, '#5588aa', s);
-            }
-        }
-        // Drill mechanism
-        const drillSpin = active ? (frame % 6) : 0;
-        for (let y = 0; y < 10; y++) {
-            const drillWidth = 3 - Math.floor(y / 4);
-            for (let x = -drillWidth; x <= drillWidth; x++) {
-                const stripe = ((x + y + drillSpin) % 2 === 0) ? '#667788' : '#889999';
-                px(ctx, 16 + x, y, stripe, s);
-            }
-        }
-        // Water tank
-        for (let x = 20; x < 26; x++) {
-            for (let y = 12; y < 20; y++) {
-                px(ctx, x, y, '#3366aa', s);
-            }
-        }
-        // Water level indicator
+        isoCube(ctx, cx, cy, 14, 0, 16, '#5588aa', '#447799', '#66aacc');
+
+        // Drill tower
+        isoCube(ctx, cx, cy - 16, 5, 0, 14, '#778899', '#667788', '#889aaa');
+
+        // Drill bit (rotating)
+        const drillRot = active ? frame * 0.3 : 0;
+        ctx.save();
+        ctx.translate(cx, cy - 30);
+        ctx.rotate(drillRot);
+        ctx.fillStyle = '#667788';
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(-3, 0);
+        ctx.lineTo(3, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Water tank (cylinder on side)
+        isoCylinder(ctx, cx + 12, cy - 4, 5, 12, '#3366aa', '#224488');
+
+        // Water level
         if (active) {
-            const waterLevel = 4 + (frame % 4);
-            for (let y = 20 - waterLevel; y < 20; y++) {
-                px(ctx, 21, y, '#4488cc', s);
-                px(ctx, 24, y, '#4488cc', s);
-            }
+            const waterLevel = 4 + (frame % 6);
+            ctx.fillStyle = '#4488cc';
+            ctx.beginPath();
+            ctx.ellipse(cx + 12, cy - 4 - waterLevel, 4, 2, 0, 0, Math.PI * 2);
+            ctx.fill();
         }
+
         // Status light
-        px(ctx, 10, 12, active ? '#44ffff' : '#4444aa', s);
+        ctx.fillStyle = active ? '#44ffff' : '#4444aa';
+        ctx.beginPath();
+        ctx.arc(cx - 10, cy - 10, 3, 0, Math.PI * 2);
+        ctx.fill();
     },
 
-    // Assembler - crafting machine
+    // Assembler (isometric)
     assembler: (ctx, w, h, frame, active) => {
-        const s = 2;
+        const cx = 32, cy = 48;
+
         // Base platform
-        for (let x = 2; x < 30; x++) {
-            for (let y = 22; y < 28; y++) {
-                px(ctx, x, y, '#445566', s);
-            }
-        }
+        isoCube(ctx, cx, cy, 20, 0, 6, '#445566', '#334455', '#556677');
+
         // Main body
-        for (let x = 6; x < 26; x++) {
-            for (let y = 8; y < 22; y++) {
-                px(ctx, x, y, '#556677', s);
-            }
-        }
+        isoCube(ctx, cx, cy - 6, 16, 0, 18, '#556677', '#445566', '#667788');
+
         // Display screen
-        for (let x = 10; x < 22; x++) {
-            for (let y = 10; y < 16; y++) {
-                px(ctx, x, y, active ? '#003322' : '#001111', s);
-            }
-        }
+        ctx.fillStyle = active ? '#003322' : '#111122';
+        ctx.fillRect(cx - 10, cy - 20, 20, 10);
+
         // Screen content when active
         if (active) {
+            ctx.fillStyle = '#00ff88';
             const blink = (frame % 20) < 10;
-            px(ctx, 12, 12, blink ? '#00ff88' : '#004422', s);
-            px(ctx, 14, 13, '#00ff88', s);
-            px(ctx, 16, 11, blink ? '#00ff88' : '#004422', s);
-            px(ctx, 18, 12, '#00ff88', s);
+            if (blink) ctx.fillRect(cx - 6, cy - 18, 3, 2);
+            ctx.fillRect(cx - 1, cy - 16, 3, 2);
+            if (blink) ctx.fillRect(cx + 4, cy - 18, 3, 2);
         }
+
         // Robotic arm
-        const armAngle = active ? Math.sin(frame * 0.2) * 3 : 0;
-        for (let i = 0; i < 6; i++) {
-            px(ctx, 16 + armAngle, 18 + i, '#888899', s);
-        }
-        // Arm claw
-        px(ctx, 14 + armAngle, 24, '#888899', s);
-        px(ctx, 18 + armAngle, 24, '#888899', s);
-        // Input/output slots
-        px(ctx, 4, 14, '#333344', s);
-        px(ctx, 4, 16, '#333344', s);
-        px(ctx, 27, 14, '#333344', s);
-        px(ctx, 27, 16, '#333344', s);
+        const armAngle = active ? Math.sin(frame * 0.15) * 0.3 : 0;
+        ctx.save();
+        ctx.translate(cx, cy - 6);
+        ctx.rotate(armAngle);
+        ctx.fillStyle = '#888899';
+        ctx.fillRect(-2, 0, 4, 14);
+        // Claw
+        ctx.fillRect(-5, 12, 4, 3);
+        ctx.fillRect(1, 12, 4, 3);
+        ctx.restore();
+
+        // Input/output ports
+        ctx.fillStyle = '#333344';
+        ctx.fillRect(cx - 18, cy - 12, 4, 6);
+        ctx.fillRect(cx + 14, cy - 12, 4, 6);
     },
 
-    // Heat lamp - safer heating
+    // Heat lamp (isometric)
     heat_lamp: (ctx, w, h, frame, active) => {
-        const s = 2;
-        // Stand
-        for (let y = 18; y < 28; y++) {
-            px(ctx, 15, y, '#555555', s);
-            px(ctx, 16, y, '#666666', s);
-        }
+        const cx = 32, cy = 48;
+
         // Base
-        for (let x = 10; x < 22; x++) {
-            for (let y = 26; y < 28; y++) {
-                px(ctx, x, y, '#444444', s);
-            }
-        }
-        // Lamp shade
-        for (let x = 8; x < 24; x++) {
-            const height = 8 - Math.abs(x - 16) / 2;
-            for (let y = 10; y < 10 + height; y++) {
-                px(ctx, x, y, '#cc8844', s);
-            }
-        }
+        isoTop(ctx, cx, cy + 4, 10, '#444455');
+
+        // Stand
+        isoCube(ctx, cx, cy, 3, 0, 20, '#666666', '#555555', '#777777');
+
+        // Lamp shade (cone shape)
+        ctx.fillStyle = '#cc8844';
+        ctx.beginPath();
+        ctx.moveTo(cx - 14, cy - 20);
+        ctx.lineTo(cx + 14, cy - 20);
+        ctx.lineTo(cx + 6, cy - 30);
+        ctx.lineTo(cx - 6, cy - 30);
+        ctx.closePath();
+        ctx.fill();
+
+        // Shade depth
+        ctx.fillStyle = '#aa6622';
+        ctx.beginPath();
+        ctx.moveTo(cx - 14, cy - 20);
+        ctx.lineTo(cx - 6, cy - 30);
+        ctx.lineTo(cx - 6, cy - 28);
+        ctx.lineTo(cx - 12, cy - 20);
+        ctx.closePath();
+        ctx.fill();
+
         // Bulb glow when active
         if (active) {
-            const glow = 150 + Math.sin(frame * 0.15) * 50;
-            ctx.fillStyle = `rgba(255, ${glow}, 100, 0.6)`;
+            const glow = 0.5 + Math.sin(frame * 0.15) * 0.2;
+            ctx.fillStyle = `rgba(255, 200, 100, ${glow})`;
             ctx.beginPath();
-            ctx.arc(16 * s, 14 * s, 5 * s, 0, Math.PI * 2);
+            ctx.arc(cx, cy - 24, 8, 0, Math.PI * 2);
             ctx.fill();
-            // Heat waves
-            if (frame % 8 < 4) {
-                px(ctx, 14, 6, 'rgba(255,150,50,0.4)', s);
-                px(ctx, 18, 5, 'rgba(255,150,50,0.3)', s);
-            }
+
+            // Heat cone
+            ctx.fillStyle = 'rgba(255, 150, 50, 0.15)';
+            ctx.beginPath();
+            ctx.moveTo(cx - 10, cy - 20);
+            ctx.lineTo(cx + 10, cy - 20);
+            ctx.lineTo(cx + 18, cy + 4);
+            ctx.lineTo(cx - 18, cy + 4);
+            ctx.closePath();
+            ctx.fill();
         }
     },
 
-    // Pipe - liquid transport
+    // Pipe (isometric)
     pipe: (ctx, w, h, frame, rotation, active) => {
-        const s = 2;
-        // Horizontal pipe (rotation 0 or 2)
-        const isHorizontal = (rotation % 2) === 0;
+        const cx = 32, cy = 48;
+        const rot = rotation || 0;
+        const isHorizontal = (rot % 2) === 0;
+
         if (isHorizontal) {
-            for (let x = 0; x < 32; x++) {
-                for (let y = 12; y < 20; y++) {
-                    const shade = (y === 12 || y === 19) ? '#445566' : '#556677';
-                    px(ctx, x, y, shade, s);
-                }
-            }
-            // Flow animation
+            // Horizontal pipe (isometric tube)
+            ctx.fillStyle = '#556677';
+            ctx.beginPath();
+            ctx.ellipse(cx - 20, cy, 4, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#667788';
+            ctx.fillRect(cx - 20, cy - 8, 40, 16);
+
+            ctx.fillStyle = '#556677';
+            ctx.beginPath();
+            ctx.ellipse(cx + 20, cy, 4, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Flow
             if (active) {
-                const flowOffset = frame % 8;
-                for (let x = flowOffset; x < 32; x += 8) {
-                    px(ctx, x, 15, '#4488cc', s);
-                    px(ctx, x, 16, '#4488cc', s);
+                ctx.fillStyle = '#4488cc';
+                const flowOffset = (frame * 3) % 40;
+                for (let i = 0; i < 4; i++) {
+                    const fx = cx - 18 + ((flowOffset + i * 10) % 40);
+                    ctx.beginPath();
+                    ctx.ellipse(fx, cy, 2, 4, 0, 0, Math.PI * 2);
+                    ctx.fill();
                 }
             }
         } else {
-            // Vertical pipe
-            for (let x = 12; x < 20; x++) {
-                for (let y = 0; y < 32; y++) {
-                    const shade = (x === 12 || x === 19) ? '#445566' : '#556677';
-                    px(ctx, x, y, shade, s);
-                }
-            }
-            // Flow animation
+            // Vertical pipe (isometric)
+            isoCylinder(ctx, cx, cy + 8, 6, 32, '#667788', '#556677');
+
+            // Flow
             if (active) {
-                const flowOffset = frame % 8;
-                for (let y = flowOffset; y < 32; y += 8) {
-                    px(ctx, 15, y, '#4488cc', s);
-                    px(ctx, 16, y, '#4488cc', s);
+                ctx.fillStyle = '#4488cc';
+                const flowOffset = (frame * 3) % 30;
+                for (let i = 0; i < 3; i++) {
+                    const fy = cy + 6 - ((flowOffset + i * 10) % 30);
+                    ctx.beginPath();
+                    ctx.ellipse(cx, fy, 3, 1.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
                 }
             }
         }
-        // Joint rings
-        px(ctx, isHorizontal ? 2 : 14, isHorizontal ? 14 : 2, '#667788', s);
-        px(ctx, isHorizontal ? 29 : 17, isHorizontal ? 14 : 29, '#667788', s);
     },
 
-    // Repair robot - fixes machines
+    // Repair robot (isometric)
     repair_robot: (ctx, w, h, frame, active) => {
-        const s = 2;
-        // Treads
-        for (let x = 6; x < 12; x++) {
-            for (let y = 22; y < 28; y++) {
-                const tread = ((x + y + frame) % 2 === 0) ? '#333333' : '#444444';
-                px(ctx, x, y, tread, s);
-            }
+        const cx = 32, cy = 48;
+
+        // Treads (animated)
+        const treadAnim = active ? frame : 0;
+        ctx.fillStyle = '#333333';
+        for (let i = 0; i < 4; i++) {
+            const ty = ((treadAnim + i * 3) % 12) - 6;
+            ctx.fillRect(cx - 16, cy + ty - 1, 6, 3);
+            ctx.fillRect(cx + 10, cy + ty - 1, 6, 3);
         }
-        for (let x = 20; x < 26; x++) {
-            for (let y = 22; y < 28; y++) {
-                const tread = ((x + y + frame) % 2 === 0) ? '#333333' : '#444444';
-                px(ctx, x, y, tread, s);
-            }
-        }
+
+        // Tread housings
+        isoCube(ctx, cx - 12, cy, 5, 0, 10, '#444444', '#333333', '#555555');
+        isoCube(ctx, cx + 12, cy, 5, 0, 10, '#444444', '#333333', '#555555');
+
         // Body
-        for (let x = 8; x < 24; x++) {
-            for (let y = 12; y < 22; y++) {
-                px(ctx, x, y, '#ff8844', s);
-            }
-        }
-        // Tool arm
-        const armExtend = active ? Math.sin(frame * 0.3) * 4 : 0;
-        for (let i = 0; i < 6; i++) {
-            px(ctx, 24 + i, 16 + armExtend, '#888888', s);
-        }
-        // Wrench tool
-        px(ctx, 29, 14 + armExtend, '#888888', s);
-        px(ctx, 29, 18 + armExtend, '#888888', s);
+        isoCube(ctx, cx, cy - 4, 10, 0, 12, '#ff8844', '#dd6622', '#ffaa66');
+
         // Sensor dome
-        for (let x = 12; x < 20; x++) {
-            for (let y = 8; y < 12; y++) {
-                if ((x - 16) * (x - 16) + (y - 10) * (y - 10) < 16) {
-                    px(ctx, x, y, '#aabbcc', s);
-                }
-            }
-        }
-        // Status indicator
-        px(ctx, 16, 10, active ? '#44ff44' : '#ffaa00', s);
+        isoCylinder(ctx, cx, cy - 20, 6, 6, '#aabbcc', '#8899aa');
+
+        // Tool arm
+        const armExtend = active ? Math.sin(frame * 0.2) * 6 : 0;
+        ctx.fillStyle = '#888888';
+        ctx.fillRect(cx + 10, cy - 10 + armExtend * 0.3, 12 + armExtend, 4);
+
+        // Wrench
+        ctx.fillStyle = '#777777';
+        ctx.fillRect(cx + 20 + armExtend, cy - 14 + armExtend * 0.3, 4, 3);
+        ctx.fillRect(cx + 20 + armExtend, cy - 6 + armExtend * 0.3, 4, 3);
+
+        // Status light
+        ctx.fillStyle = active ? '#44ff44' : '#ffaa00';
+        ctx.beginPath();
+        ctx.arc(cx, cy - 18, 3, 0, Math.PI * 2);
+        ctx.fill();
     },
 
-    // Battery bank - stores multiple batteries
+    // Battery bank (isometric)
     battery_bank: (ctx, w, h, frame, charge) => {
-        const s = 2;
+        const cx = 32, cy = 48;
+
         // Rack frame
-        for (let x = 2; x < 30; x++) {
-            px(ctx, x, 6, '#444455', s);
-            px(ctx, x, 27, '#444455', s);
-        }
-        for (let y = 6; y < 28; y++) {
-            px(ctx, 2, y, '#444455', s);
-            px(ctx, 29, y, '#444455', s);
-        }
-        // Battery slots (3 batteries)
-        for (let slot = 0; slot < 3; slot++) {
-            const bx = 6 + slot * 8;
-            // Battery casing
-            for (let x = bx; x < bx + 6; x++) {
-                for (let y = 8; y < 26; y++) {
-                    px(ctx, x, y, '#334433', s);
-                }
-            }
+        isoCube(ctx, cx, cy, 22, 0, 24, '#444455', '#333344', '#555566');
+
+        // Three batteries inside
+        for (let i = 0; i < 3; i++) {
+            const bx = cx - 12 + i * 12;
+            const by = cy - 2 + (i - 1) * 3;
+
+            // Battery
+            isoCube(ctx, bx, by, 4, 0, 18, '#445544', '#334433', '#556655');
+
             // Charge level
-            const slotCharge = Math.min(100, Math.max(0, charge - slot * 33) * 3);
+            const slotCharge = Math.min(100, Math.max(0, (charge || 50) - i * 20) * 1.5);
             const chargeHeight = Math.floor((slotCharge / 100) * 14);
             const chargeColor = slotCharge > 50 ? '#44ff44' : slotCharge > 25 ? '#ffff44' : '#ff4444';
-            for (let x = bx + 1; x < bx + 5; x++) {
-                for (let y = 24 - chargeHeight; y < 24; y++) {
-                    px(ctx, x, y, chargeColor, s);
-                }
-            }
+
+            ctx.fillStyle = chargeColor;
+            ctx.fillRect(bx - 2, by - chargeHeight, 4, chargeHeight);
+
             // Terminal
-            px(ctx, bx + 2, 7, '#666666', s);
-            px(ctx, bx + 3, 7, '#666666', s);
+            ctx.fillStyle = '#666666';
+            ctx.fillRect(bx - 1, by - 18, 2, 2);
         }
+
         // Connection cables
-        for (let slot = 0; slot < 2; slot++) {
-            const cx = 12 + slot * 8;
-            px(ctx, cx, 16, '#cc8844', s);
-            px(ctx, cx + 1, 16, '#cc8844', s);
-        }
+        ctx.strokeStyle = '#cc8844';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 12, cy - 10);
+        ctx.lineTo(cx, cy - 8);
+        ctx.lineTo(cx + 12, cy - 6);
+        ctx.stroke();
     },
 
-    // Fuel refinery - makes super fuel
+    // Fuel refinery (isometric)
     fuel_refinery: (ctx, w, h, frame, active) => {
-        const s = 2;
+        const cx = 32, cy = 48;
+
         // Base platform
-        for (let x = 2; x < 30; x++) {
-            for (let y = 24; y < 28; y++) {
-                px(ctx, x, y, '#445555', s);
-            }
-        }
-        // Main tank
-        for (let x = 6; x < 18; x++) {
-            for (let y = 8; y < 24; y++) {
-                px(ctx, x, y, '#556666', s);
-            }
-        }
+        isoCube(ctx, cx, cy, 22, 0, 4, '#445555', '#334444', '#556666');
+
+        // Main tank (large cylinder)
+        isoCylinder(ctx, cx - 6, cy - 4, 10, 24, '#556666', '#445555');
+
         // Tank bands
-        for (let x = 6; x < 18; x++) {
-            px(ctx, x, 10, '#667777', s);
-            px(ctx, x, 16, '#667777', s);
-            px(ctx, x, 22, '#667777', s);
-        }
+        ctx.strokeStyle = '#667777';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(cx - 6, cy - 10, 10, 5, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx - 6, cy - 18, 10, 5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
         // Processing column
-        for (let x = 20; x < 28; x++) {
-            for (let y = 4; y < 24; y++) {
-                px(ctx, x, y, '#445566', s);
-            }
-        }
+        isoCube(ctx, cx + 12, cy - 4, 6, 0, 28, '#445566', '#334455', '#556677');
+
         // Pipes connecting
-        for (let x = 18; x < 21; x++) {
-            px(ctx, x, 12, '#556677', s);
-            px(ctx, x, 18, '#556677', s);
-        }
+        ctx.fillStyle = '#556677';
+        ctx.fillRect(cx + 2, cy - 14, 8, 3);
+        ctx.fillRect(cx + 2, cy - 22, 8, 3);
+
         // Bubbles when active
         if (active) {
-            for (let i = 0; i < 3; i++) {
-                const by = 12 + ((frame + i * 4) % 10);
-                const bx = 10 + (i * 2);
-                px(ctx, bx, by, '#ff88ff', s);
+            ctx.fillStyle = '#ff88ff';
+            for (let i = 0; i < 4; i++) {
+                const by = cy - 8 - ((frame * 2 + i * 6) % 18);
+                const bx = cx - 8 + (i % 2) * 4 + Math.sin(frame * 0.2 + i) * 2;
+                ctx.beginPath();
+                ctx.arc(bx, by, 2, 0, Math.PI * 2);
+                ctx.fill();
             }
+
             // Glow at top
-            const glow = (frame % 10) < 5;
-            px(ctx, 23, 6, glow ? '#ff00ff' : '#880088', s);
-            px(ctx, 24, 6, glow ? '#ff00ff' : '#880088', s);
+            const glow = (frame % 15) < 8;
+            ctx.fillStyle = glow ? '#ff00ff' : '#880088';
+            ctx.beginPath();
+            ctx.arc(cx + 12, cy - 34, 4, 0, Math.PI * 2);
+            ctx.fill();
         }
-        // Output pipe
-        for (let y = 20; y < 26; y++) {
-            px(ctx, 28, y, '#556677', s);
-        }
+
         // Warning stripes
-        for (let y = 8; y < 16; y += 2) {
-            px(ctx, 5, y, '#ffaa00', s);
+        ctx.fillStyle = '#ffaa00';
+        for (let i = 0; i < 3; i++) {
+            ctx.fillRect(cx - 18, cy - 8 - i * 8, 3, 4);
         }
     }
 };
