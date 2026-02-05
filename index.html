@@ -4609,6 +4609,7 @@ function saveGame() {
         robot: game.robot,
         machines: game.machines,
         resources: game.resources,
+        tiles: game.tiles,
         explored: game.explored,
         credits: game.credits,
         stats: game.stats,
@@ -4630,18 +4631,51 @@ function loadGame(slot) {
 
     try {
         const saveData = JSON.parse(data);
-        game.planet = saveData.planet;
-        game.dayTime = saveData.dayTime;
+        game.planet = saveData.planet || 'terra_prime';
+        game.dayTime = saveData.dayTime || 0;
         game.robot = saveData.robot;
-        game.machines = saveData.machines;
-        game.resources = saveData.resources;
-        game.explored = saveData.explored;
-        game.credits = saveData.credits;
-        game.stats = saveData.stats;
+        game.machines = saveData.machines || [];
+        game.resources = saveData.resources || [];
+        game.explored = saveData.explored || [];
+        game.credits = saveData.credits || 100;
+        game.stats = saveData.stats || { playtime: 0, machinesBuilt: 0, resourcesMined: 0 };
         game.cheatsActive = saveData.cheats || {};
         game.theme = saveData.theme;
         game.sunTrackers = saveData.sunTrackers || [];
         game.cables = saveData.cables || [];
+
+        // Load tiles or regenerate if missing (for old saves)
+        if (saveData.tiles && saveData.tiles.length > 0) {
+            game.tiles = saveData.tiles;
+        } else {
+            // Regenerate tiles for old saves that didn't have them
+            game.tiles = [];
+            for (let y = 0; y < CONFIG.MAP_SIZE; y++) {
+                game.tiles[y] = [];
+                for (let x = 0; x < CONFIG.MAP_SIZE; x++) {
+                    const noise = Math.sin(x * 0.1) * Math.cos(y * 0.1) +
+                                 Math.sin(x * 0.05 + y * 0.05) * 0.5;
+                    let type = 'snow';
+                    if (noise > 0.3) type = 'ice';
+                    if (noise < -0.5) type = 'rock';
+                    game.tiles[y][x] = {
+                        type: type,
+                        temperature: CONFIG.PLANETS[game.planet].baseTemp
+                    };
+                }
+            }
+        }
+
+        // Ensure explored array exists and is properly sized
+        if (!game.explored || game.explored.length === 0) {
+            game.explored = [];
+            for (let y = 0; y < CONFIG.MAP_SIZE; y++) {
+                game.explored[y] = [];
+                for (let x = 0; x < CONFIG.MAP_SIZE; x++) {
+                    game.explored[y][x] = false;
+                }
+            }
+        }
 
         applyTheme(game.theme);
         return true;
