@@ -637,6 +637,77 @@
             background: #744;
         }
 
+        /* Keybinds Button */
+        #keybindsBtn {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            padding: 8px 15px;
+            background: var(--ui-button);
+            border: 2px solid var(--ui-border);
+            border-radius: 5px;
+            color: var(--ui-text);
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        #keybindsBtn:hover {
+            background: var(--ui-highlight);
+        }
+
+        /* Keybinds Modal */
+        #keybindsModal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--ui-bg);
+            border: 3px solid var(--ui-border);
+            border-radius: 10px;
+            padding: 25px;
+            display: none;
+            z-index: 200;
+            min-width: 350px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        #keybindsModal h2 {
+            color: var(--ui-accent);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .keybind-section {
+            margin-bottom: 15px;
+        }
+
+        .keybind-section h3 {
+            color: var(--ui-accent);
+            font-size: 14px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--ui-border);
+            padding-bottom: 5px;
+        }
+
+        .keybind-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            color: var(--ui-text);
+            font-size: 12px;
+        }
+
+        .keybind-key {
+            background: var(--ui-button);
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-family: monospace;
+            min-width: 60px;
+            text-align: center;
+        }
+
         /* Notifications */
         #notifications {
             position: absolute;
@@ -777,6 +848,49 @@
 
         <!-- Notifications -->
         <div id="notifications"></div>
+
+        <!-- Keybinds Button -->
+        <button id="keybindsBtn" onclick="toggleKeybinds()">⌨️ Controls</button>
+    </div>
+
+    <!-- Keybinds Modal -->
+    <div id="keybindsModal">
+        <h2>⌨️ Controls</h2>
+
+        <div class="keybind-section">
+            <h3>Movement</h3>
+            <div class="keybind-row"><span>Move Robot</span><span class="keybind-key">WASD</span></div>
+            <div class="keybind-row"><span>Pan Camera</span><span class="keybind-key">Middle Mouse</span></div>
+            <div class="keybind-row"><span>Zoom</span><span class="keybind-key">Scroll</span></div>
+            <div class="keybind-row"><span>Toggle Follow</span><span class="keybind-key">F</span></div>
+        </div>
+
+        <div class="keybind-section">
+            <h3>Interaction</h3>
+            <div class="keybind-row"><span>Interact / Place</span><span class="keybind-key">Left Click</span></div>
+            <div class="keybind-row"><span>Machine Menu</span><span class="keybind-key">Right Click</span></div>
+            <div class="keybind-row"><span>Pick Up / Extinguish</span><span class="keybind-key">E</span></div>
+            <div class="keybind-row"><span>Drop Item</span><span class="keybind-key">Q</span></div>
+            <div class="keybind-row"><span>Rotate Building</span><span class="keybind-key">R</span></div>
+        </div>
+
+        <div class="keybind-section">
+            <h3>Menus</h3>
+            <div class="keybind-row"><span>Build Menu</span><span class="keybind-key">Tab</span></div>
+            <div class="keybind-row"><span>Inventory</span><span class="keybind-key">I</span></div>
+            <div class="keybind-row"><span>Full Map</span><span class="keybind-key">M</span></div>
+            <div class="keybind-row"><span>Pause</span><span class="keybind-key">Space</span></div>
+            <div class="keybind-row"><span>Cancel / Close</span><span class="keybind-key">Esc</span></div>
+        </div>
+
+        <div class="keybind-section">
+            <h3>Cheats (type "levitysm")</h3>
+            <div class="keybind-row"><span>Rocket: Destroy</span><span class="keybind-key">1</span></div>
+            <div class="keybind-row"><span>Rocket: Clear</span><span class="keybind-key">2</span></div>
+            <div class="keybind-row"><span>Rocket: Launch</span><span class="keybind-key">3</span></div>
+        </div>
+
+        <button class="pause-btn" onclick="toggleKeybinds()">Close</button>
     </div>
 
     <!-- Pause Menu -->
@@ -1308,7 +1422,7 @@ function generateWorld() {
 
     // Generate resource nodes
     game.resources = [];
-    const nodeCount = Math.floor(CONFIG.MAP_SIZE * CONFIG.MAP_SIZE * 0.002);
+    const nodeCount = Math.floor(CONFIG.MAP_SIZE * CONFIG.MAP_SIZE * 0.006);
 
     for (let i = 0; i < nodeCount; i++) {
         const x = Math.floor(Math.random() * CONFIG.MAP_SIZE);
@@ -2808,7 +2922,12 @@ function resumeGame() {
 }
 
 function showControls() {
-    notify('WASD: Move | Scroll: Zoom | Middle: Pan | Tab: Build | I: Inventory | F: Follow | Space: Pause');
+    toggleKeybinds();
+}
+
+function toggleKeybinds() {
+    const modal = document.getElementById('keybindsModal');
+    modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
 }
 
 function quitToMenu() {
