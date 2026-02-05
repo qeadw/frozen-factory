@@ -188,21 +188,25 @@
             background: var(--ui-bg);
             border-top: 2px solid var(--ui-border);
             display: flex;
+            justify-content: center;
+            align-items: flex-start;
             padding: 10px 20px;
             gap: 20px;
         }
 
         #buildMenu {
-            width: 400px;
+            flex: 1;
+            max-width: 600px;
             display: flex;
             flex-wrap: wrap;
+            justify-content: center;
             gap: 5px;
             overflow-y: auto;
         }
 
         .build-item {
-            width: 45px;
-            height: 45px;
+            width: 50px;
+            height: 50px;
             background: var(--ui-button);
             border: 2px solid var(--ui-border);
             border-radius: 5px;
@@ -212,11 +216,19 @@
             align-items: center;
             font-size: 20px;
             transition: all 0.2s;
+            padding: 2px;
+            box-sizing: border-box;
+        }
+
+        .build-item img {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
         }
 
         .build-item:hover {
             background: var(--ui-highlight);
             transform: scale(1.1);
+            z-index: 10;
         }
 
         .build-item.selected {
@@ -225,15 +237,18 @@
         }
 
         #selectedInfo {
-            flex: 1;
+            width: 200px;
+            min-width: 200px;
             background: var(--ui-button);
             border-radius: 5px;
             padding: 10px;
             color: var(--ui-text);
+            overflow: hidden;
         }
 
         #robotStatus {
             width: 200px;
+            min-width: 200px;
             background: var(--ui-button);
             border-radius: 5px;
             padding: 10px;
@@ -804,11 +819,11 @@
 
         <!-- Bottom Bar -->
         <div id="bottomBar">
-            <div id="buildMenu"></div>
             <div id="selectedInfo">
                 <h4 style="color: var(--ui-accent);">Nothing Selected</h4>
                 <p style="font-size: 12px;">Click on a machine or use build menu</p>
             </div>
+            <div id="buildMenu"></div>
             <div id="robotStatus">
                 <h4 style="color: var(--ui-accent); margin-bottom: 10px;">Robot Status</h4>
                 <div class="status-row">
@@ -1434,48 +1449,148 @@ const SPRITES = {
     solar_panel: (ctx, w, h, frame, isDay) => {
         const cx = 64, cy = 96;
 
-        // Support post
-        isoCube(ctx, cx, cy + 8, 4, 0, 20, '#556677', '#445566', '#667788');
+        // Ground base (concrete pad)
+        isoTop(ctx, cx, cy + 10, 18, '#555566');
+        isoTop(ctx, cx, cy + 8, 16, '#666677');
 
-        // Base
-        isoTop(ctx, cx, cy + 12, 12, '#445566');
+        // Central support pillar
+        isoCube(ctx, cx, cy + 4, 3, 0, 14, '#778899', '#667788', '#889aaa');
 
-        // Panel frame (tilted)
+        // Pivot joint (ball)
+        ctx.fillStyle = '#889aaa';
+        ctx.beginPath();
+        ctx.arc(cx, cy - 6, 4, 0, Math.PI * 2);
+        ctx.fill();
         ctx.fillStyle = '#667788';
         ctx.beginPath();
-        ctx.moveTo(cx - 20, cy - 8);
-        ctx.lineTo(cx + 20, cy - 8);
-        ctx.lineTo(cx + 18, cy - 20);
-        ctx.lineTo(cx - 18, cy - 20);
-        ctx.closePath();
+        ctx.arc(cx - 1, cy - 7, 2, 0, Math.PI * 2);
         ctx.fill();
 
-        // Solar cells
-        const glow = isDay ? Math.sin(frame * 0.1) * 30 : 0;
-        const cellColor = isDay ? `rgb(${50 + glow}, ${120 + glow}, ${200 + glow})` : '#334466';
-        ctx.fillStyle = cellColor;
+        // Panel frame - tilted isometric rectangle facing up-right
+        // Back edge of frame (silver/aluminum)
+        ctx.fillStyle = '#aabbcc';
         ctx.beginPath();
-        ctx.moveTo(cx - 17, cy - 9);
-        ctx.lineTo(cx + 17, cy - 9);
-        ctx.lineTo(cx + 15, cy - 18);
-        ctx.lineTo(cx - 15, cy - 18);
+        ctx.moveTo(cx - 24, cy - 6);
+        ctx.lineTo(cx + 24, cy - 18);
+        ctx.lineTo(cx + 24, cy - 21);
+        ctx.lineTo(cx - 24, cy - 9);
         ctx.closePath();
         ctx.fill();
 
-        // Grid lines
-        ctx.strokeStyle = '#223344';
+        // Panel surface (dark blue base)
+        const dayBrightness = isDay ? 1 : 0.4;
+        ctx.fillStyle = isDay ? '#1a3366' : '#0d1a33';
+        ctx.beginPath();
+        ctx.moveTo(cx - 24, cy - 6);
+        ctx.lineTo(cx + 24, cy - 18);
+        ctx.lineTo(cx + 20, cy - 34);
+        ctx.lineTo(cx - 28, cy - 22);
+        ctx.closePath();
+        ctx.fill();
+
+        // Draw solar cells in a 4x3 grid
+        const cellRows = 3;
+        const cellCols = 4;
+        for (let row = 0; row < cellRows; row++) {
+            for (let col = 0; col < cellCols; col++) {
+                // Calculate cell position with perspective
+                const cellW = 11;
+                const cellH = 4;
+                const baseX = cx - 22 + col * cellW;
+                const baseY = cy - 8 - row * cellH - col * 2.5;
+
+                // Cell color with slight variation
+                const shimmer = isDay ? Math.sin(frame * 0.15 + row + col) * 15 : 0;
+                const r = Math.floor((30 + shimmer) * dayBrightness);
+                const g = Math.floor((80 + shimmer) * dayBrightness);
+                const b = Math.floor((160 + shimmer * 1.5) * dayBrightness);
+                ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+
+                // Draw cell as small parallelogram
+                ctx.beginPath();
+                ctx.moveTo(baseX, baseY);
+                ctx.lineTo(baseX + cellW - 1, baseY - 2.5);
+                ctx.lineTo(baseX + cellW - 2, baseY - cellH - 1.5);
+                ctx.lineTo(baseX - 1, baseY - cellH + 1);
+                ctx.closePath();
+                ctx.fill();
+
+                // Cell highlight (top-left)
+                if (isDay) {
+                    ctx.fillStyle = `rgba(100, 150, 255, ${0.2 + shimmer * 0.01})`;
+                    ctx.beginPath();
+                    ctx.moveTo(baseX, baseY);
+                    ctx.lineTo(baseX + 3, baseY - 0.8);
+                    ctx.lineTo(baseX + 2, baseY - 2);
+                    ctx.lineTo(baseX - 1, baseY - 1.2);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Grid lines between cells (silver)
+        ctx.strokeStyle = '#8899aa';
         ctx.lineWidth = 1;
-        for (let i = -12; i <= 12; i += 6) {
+        // Vertical dividers
+        for (let col = 1; col < cellCols; col++) {
+            const x = cx - 22 + col * 11;
             ctx.beginPath();
-            ctx.moveTo(cx + i, cy - 9);
-            ctx.lineTo(cx + i * 0.9, cy - 18);
+            ctx.moveTo(x, cy - 7 - col * 2.5);
+            ctx.lineTo(x - 4, cy - 21 - col * 2.5);
+            ctx.stroke();
+        }
+        // Horizontal dividers
+        for (let row = 1; row < cellRows; row++) {
+            ctx.beginPath();
+            ctx.moveTo(cx - 23, cy - 8 - row * 4);
+            ctx.lineTo(cx + 21, cy - 20 - row * 4);
             ctx.stroke();
         }
 
-        // Shine when day
-        if (isDay && frame % 40 < 20) {
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.fillRect(cx - 10, cy - 16, 6, 3);
+        // Frame edges (aluminum border)
+        ctx.strokeStyle = '#99aabb';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 24, cy - 6);
+        ctx.lineTo(cx + 24, cy - 18);
+        ctx.lineTo(cx + 20, cy - 34);
+        ctx.lineTo(cx - 28, cy - 22);
+        ctx.closePath();
+        ctx.stroke();
+
+        // Animated sun reflection glint
+        if (isDay) {
+            const glintPos = (frame % 60) / 60;
+            const glintX = cx - 20 + glintPos * 40;
+            const glintY = cy - 28 + glintPos * 16;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.beginPath();
+            ctx.moveTo(glintX, glintY);
+            ctx.lineTo(glintX + 3, glintY - 1);
+            ctx.lineTo(glintX + 2, glintY - 3);
+            ctx.lineTo(glintX - 1, glintY - 2);
+            ctx.closePath();
+            ctx.fill();
+
+            // Secondary smaller glint
+            ctx.fillStyle = 'rgba(200, 230, 255, 0.4)';
+            ctx.beginPath();
+            ctx.arc(glintX + 8, glintY + 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Power indicator LED
+        ctx.fillStyle = isDay ? '#00ff44' : '#442200';
+        ctx.beginPath();
+        ctx.arc(cx + 22, cy - 16, 2, 0, Math.PI * 2);
+        ctx.fill();
+        if (isDay) {
+            // LED glow
+            ctx.fillStyle = 'rgba(0, 255, 68, 0.3)';
+            ctx.beginPath();
+            ctx.arc(cx + 22, cy - 16, 4, 0, Math.PI * 2);
+            ctx.fill();
         }
     },
 
@@ -2494,13 +2609,29 @@ function generateWorld() {
         }
     }
 
-    // Generate resource nodes
+    // Generate resource nodes - more near spawn, fewer far away
     game.resources = [];
-    const nodeCount = Math.floor(CONFIG.MAP_SIZE * CONFIG.MAP_SIZE * 0.006);
+    const spawnX = 256, spawnY = 256;
+    const baseNodeCount = Math.floor(CONFIG.MAP_SIZE * CONFIG.MAP_SIZE * 0.004);
 
-    for (let i = 0; i < nodeCount; i++) {
+    for (let i = 0; i < baseNodeCount; i++) {
         const x = Math.floor(Math.random() * CONFIG.MAP_SIZE);
         const y = Math.floor(Math.random() * CONFIG.MAP_SIZE);
+
+        // Calculate distance from spawn (with wrap-around)
+        let dx = Math.abs(x - spawnX);
+        let dy = Math.abs(y - spawnY);
+        if (dx > CONFIG.MAP_SIZE / 2) dx = CONFIG.MAP_SIZE - dx;
+        if (dy > CONFIG.MAP_SIZE / 2) dy = CONFIG.MAP_SIZE - dy;
+        const distFromSpawn = Math.sqrt(dx * dx + dy * dy);
+
+        // Higher chance to skip nodes that are far from spawn
+        // Close nodes (< 50 tiles): 100% spawn
+        // Medium nodes (50-150): 70% spawn
+        // Far nodes (> 150): 40% spawn
+        const spawnChance = distFromSpawn < 50 ? 1.0 :
+                           distFromSpawn < 150 ? 0.7 : 0.4;
+        if (Math.random() > spawnChance) continue;
 
         // Determine resource type based on planet
         let resourceType = 'iron_ore';
@@ -2516,6 +2647,22 @@ function generateWorld() {
             y: y,
             type: resourceType,
             amount: 50 + Math.floor(Math.random() * 100)
+        });
+    }
+
+    // Add guaranteed resource cluster near spawn
+    for (let i = 0; i < 15; i++) {
+        const angle = (i / 15) * Math.PI * 2;
+        const dist = 8 + Math.random() * 25;
+        const x = Math.floor(spawnX + Math.cos(angle) * dist);
+        const y = Math.floor(spawnY + Math.sin(angle) * dist);
+
+        const types = ['iron_ore', 'copper_ore', 'coal'];
+        game.resources.push({
+            x: wrapCoord(x),
+            y: wrapCoord(y),
+            type: types[i % 3],
+            amount: 80 + Math.floor(Math.random() * 70)
         });
     }
 
@@ -2592,19 +2739,25 @@ function setupTutorialLoadout() {
     batt.stored = 50;
     game.machines.push(batt);
 
-    // Explore area around spawn
-    for (let dy = -8; dy <= 8; dy++) {
-        for (let dx = -8; dx <= 8; dx++) {
-            const ex = wrapCoord(spawnX + dx);
-            const ey = wrapCoord(spawnY + dy);
-            game.explored[ey][ex] = true;
+    // Explore area around spawn (circular)
+    const exploreRadius = 10;
+    for (let dy = -exploreRadius; dy <= exploreRadius; dy++) {
+        for (let dx = -exploreRadius; dx <= exploreRadius; dx++) {
+            if (dx * dx + dy * dy <= exploreRadius * exploreRadius) {
+                const ex = wrapCoord(spawnX + dx);
+                const ey = wrapCoord(spawnY + dy);
+                game.explored[ey][ex] = true;
+            }
         }
     }
 
-    // Give robot some starting items
+    // Give robot starting items for basic machines
     game.robot.inventory = [
-        { type: 'iron_ore', count: 3 },
-        { type: 'copper_ore', count: 2 }
+        { type: 'iron_ore', count: 10 },
+        { type: 'copper_ore', count: 8 },
+        { type: 'coal', count: 5 },
+        { type: 'iron_ingot', count: 5 },
+        { type: 'copper_ingot', count: 4 }
     ];
 }
 
@@ -2798,6 +2951,40 @@ function isAdjacent(x1, y1, x2, y2) {
 }
 
 // ==================== BUILD MENU ====================
+function renderBuildMenuSprite(type) {
+    const spriteFunc = SPRITES[type];
+    const size = 64;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    if (spriteFunc) {
+        // Create a temporary larger canvas for the sprite
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = 128;
+        tempCanvas.height = 128;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // Render sprite at full size
+        spriteFunc(tempCtx, 128, 128, 0, true, false, 50, 0, false, false, 'idle');
+
+        // Scale down to fit build menu
+        ctx.drawImage(tempCanvas, 16, 32, 96, 96, 0, 0, size, size);
+    } else {
+        // Fallback to emoji if no sprite
+        const machine = MACHINES[type];
+        ctx.fillStyle = machine.color || '#666';
+        ctx.fillRect(8, 8, size - 16, size - 16);
+        ctx.font = '24px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(machine.icon, size / 2, size / 2);
+    }
+
+    return canvas.toDataURL();
+}
+
 function initBuildMenu() {
     const menu = document.getElementById('buildMenu');
     menu.innerHTML = '';
@@ -2805,17 +2992,34 @@ function initBuildMenu() {
     for (const [key, machine] of Object.entries(MACHINES)) {
         const item = document.createElement('div');
         item.className = 'build-item';
-        item.innerHTML = machine.icon;
-        item.title = machine.name;
-        item.onclick = () => selectBuild(key);
+
+        // Render sprite as image
+        const img = document.createElement('img');
+        img.src = renderBuildMenuSprite(key);
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        img.draggable = false;
+        item.appendChild(img);
+
+        // Build tooltip with cost
+        let tooltip = machine.name + '\n';
+        for (const [res, count] of Object.entries(machine.cost)) {
+            const resName = RESOURCES[res]?.name || res;
+            tooltip += `${count}x ${resName}\n`;
+        }
+        item.title = tooltip.trim();
+
+        item.onclick = function() { selectBuild(key, this); };
         menu.appendChild(item);
     }
 }
 
-function selectBuild(type) {
+function selectBuild(type, element) {
     selectedBuild = type;
     document.querySelectorAll('.build-item').forEach(el => el.classList.remove('selected'));
-    event.target.classList.add('selected');
+    if (element) element.classList.add('selected');
+    notify(`Selected: ${MACHINES[type].name}`);
 }
 
 function placeMachine(type, x, y) {
@@ -2915,14 +3119,18 @@ function updateRobot(dt) {
         game.robot.battery -= 0.1 * dt;
     }
 
-    // Explore tiles around robot
+    // Explore tiles around robot (circular radius)
     const rx = Math.floor(game.robot.x);
     const ry = Math.floor(game.robot.y);
-    for (let dy = -5; dy <= 5; dy++) {
-        for (let dx = -5; dx <= 5; dx++) {
-            const ex = wrapCoord(rx + dx);
-            const ey = wrapCoord(ry + dy);
-            game.explored[ey][ex] = true;
+    const visionRadius = 6;
+    for (let dy = -visionRadius; dy <= visionRadius; dy++) {
+        for (let dx = -visionRadius; dx <= visionRadius; dx++) {
+            // Check if within circular radius
+            if (dx * dx + dy * dy <= visionRadius * visionRadius) {
+                const ex = wrapCoord(rx + dx);
+                const ey = wrapCoord(ry + dy);
+                game.explored[ey][ex] = true;
+            }
         }
     }
 
@@ -3266,6 +3474,66 @@ function addToMachineInventory(machine, type, count) {
 }
 
 // ==================== DAY/NIGHT CYCLE ====================
+
+// Get the sun's X position on the map (0 to MAP_SIZE), representing the terminator line
+function getSunPosition() {
+    const planet = CONFIG.PLANETS[game.planet];
+    const cycleLength = planet.dayLength + planet.nightLength;
+
+    if (cycleLength === Infinity) {
+        return -1; // No sun on Space Rock-024
+    }
+
+    // Sun moves across the map during the cycle
+    // At dawn (dayTime = 0): sun at left edge (x = 0)
+    // At noon (dayTime = dayLength/2): sun at center (x = MAP_SIZE/2)
+    // At dusk (dayTime = dayLength): sun at right edge (x = MAP_SIZE)
+    // During night: sun continues past right edge (off map)
+
+    const fullCycleProgress = game.dayTime / cycleLength;
+    // Sun completes a full sweep during the cycle
+    const sunX = fullCycleProgress * CONFIG.MAP_SIZE;
+
+    return sunX;
+}
+
+// Get light level for a tile based on distance from sun/terminator
+// Returns 0.0 (full dark) to 1.0 (full light)
+function getTileLightLevel(tileX) {
+    const planet = CONFIG.PLANETS[game.planet];
+    const cycleLength = planet.dayLength + planet.nightLength;
+
+    if (cycleLength === Infinity) {
+        return 0.0; // Always dark on Space Rock-024
+    }
+
+    const sunX = getSunPosition();
+    const waveWidth = 8; // Width of the transition zone in tiles
+
+    // Calculate distance from tile to sun position (accounting for wrap-around)
+    let dx = tileX - sunX;
+
+    // Normalize dx to account for map wrap-around
+    if (dx > CONFIG.MAP_SIZE / 2) dx -= CONFIG.MAP_SIZE;
+    if (dx < -CONFIG.MAP_SIZE / 2) dx += CONFIG.MAP_SIZE;
+
+    // Daylight covers about half the map, centered on the sun
+    const daylightRadius = CONFIG.MAP_SIZE / 4;
+    const absDist = Math.abs(dx);
+
+    if (absDist < daylightRadius - waveWidth) {
+        // Fully in daylight
+        return 1.0;
+    } else if (absDist > daylightRadius + waveWidth) {
+        // Fully in darkness
+        return 0.15; // Not completely black, some ambient light
+    } else {
+        // In the transition zone (the wave)
+        const transitionPos = (absDist - (daylightRadius - waveWidth)) / (waveWidth * 2);
+        return 1.0 - (transitionPos * 0.85); // Smooth gradient from 1.0 to 0.15
+    }
+}
+
 function updateDayNight(dt) {
     const planet = CONFIG.PLANETS[game.planet];
     const cycleLength = planet.dayLength + planet.nightLength;
@@ -3322,7 +3590,9 @@ function renderChunk(chunkX, chunkY) {
             if (screen.y < -CONFIG.TILE_HEIGHT * 2 || screen.y > canvas.height + CONFIG.TILE_HEIGHT * 2) continue;
 
             const tile = game.tiles[wy][wx];
-            drawIsometricTile(screen.x, screen.y, getTileColor(tile.type));
+            // Get light level based on tile's X position relative to sun
+            const lightLevel = getTileLightLevel(wx);
+            drawIsometricTile(screen.x, screen.y, getTileColor(tile.type), lightLevel);
         }
     }
 }
@@ -3518,11 +3788,23 @@ function render() {
     renderMinimap();
 }
 
-function drawIsometricTile(x, y, color) {
+function drawIsometricTile(x, y, color, lightLevel = 1.0) {
     const w = CONFIG.TILE_WIDTH * game.camera.zoom / 2;
     const h = CONFIG.TILE_HEIGHT * game.camera.zoom / 2;
 
-    ctx.fillStyle = color;
+    // Apply light level to color
+    // Parse the color and darken based on light level
+    let finalColor = color;
+    if (lightLevel < 1.0) {
+        // Convert hex color to RGB, apply lighting, convert back
+        const hex = color.replace('#', '');
+        const r = Math.floor(parseInt(hex.substr(0, 2), 16) * lightLevel);
+        const g = Math.floor(parseInt(hex.substr(2, 2), 16) * lightLevel);
+        const b = Math.floor(parseInt(hex.substr(4, 2), 16) * lightLevel);
+        finalColor = `rgb(${r}, ${g}, ${b})`;
+    }
+
+    ctx.fillStyle = finalColor;
     ctx.beginPath();
     ctx.moveTo(x, y - h);
     ctx.lineTo(x + w, y);
@@ -3531,7 +3813,9 @@ function drawIsometricTile(x, y, color) {
     ctx.closePath();
     ctx.fill();
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    // Adjust stroke based on light level too
+    const strokeAlpha = 0.1 * lightLevel;
+    ctx.strokeStyle = `rgba(255,255,255,${strokeAlpha})`;
     ctx.stroke();
 }
 
@@ -4293,19 +4577,33 @@ function updateSunTrackers(dt) {
         }
 
         if (tracker.state === 'collecting') {
-            // Move toward "sun" (random wander while charging)
-            if (game.isDay) {
-                // Wander randomly
+            // Move toward daylight (follow the sun)
+            const sunX = getSunPosition();
+            const lightLevel = getTileLightLevel(tracker.x);
+
+            if (lightLevel > 0.3) {
+                // We're in daylight - follow the sun and collect energy
                 tracker.wanderTimer = (tracker.wanderTimer || 0) + dt;
                 if (tracker.wanderTimer > 2) {
-                    tracker.targetX = tracker.x + (Math.random() - 0.5) * 20;
-                    tracker.targetY = tracker.y + (Math.random() - 0.5) * 20;
+                    // Move toward the sun position, with some random offset
+                    // Calculate direction to sun (accounting for wrap-around)
+                    let dirToSun = sunX - tracker.x;
+                    if (dirToSun > CONFIG.MAP_SIZE / 2) dirToSun -= CONFIG.MAP_SIZE;
+                    if (dirToSun < -CONFIG.MAP_SIZE / 2) dirToSun += CONFIG.MAP_SIZE;
+
+                    // Target is ahead of the sun (to stay in daylight)
+                    tracker.targetX = tracker.x + Math.sign(dirToSun) * 15 + (Math.random() - 0.5) * 10;
+                    tracker.targetY = tracker.y + (Math.random() - 0.5) * 15;
                     tracker.wanderTimer = 0;
                 }
 
                 // Move toward target
-                const dx = (tracker.targetX || tracker.homeX) - tracker.x;
-                const dy = (tracker.targetY || tracker.homeY) - tracker.y;
+                let dx = (tracker.targetX || tracker.x) - tracker.x;
+                let dy = (tracker.targetY || tracker.y) - tracker.y;
+                // Handle wrap-around for movement
+                if (dx > CONFIG.MAP_SIZE / 2) dx -= CONFIG.MAP_SIZE;
+                if (dx < -CONFIG.MAP_SIZE / 2) dx += CONFIG.MAP_SIZE;
+
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > 1) {
                     tracker.x += (dx / dist) * 2 * dt;
@@ -4316,16 +4614,29 @@ function updateSunTrackers(dt) {
                 tracker.x = wrapCoord(tracker.x);
                 tracker.y = wrapCoord(tracker.y);
 
-                // Collect solar energy
-                tracker.charge += 5 * dt;
+                // Collect solar energy (more in brighter areas)
+                tracker.charge += 5 * lightLevel * dt;
 
                 // When fully charged, return home
                 if (tracker.charge >= 100) {
                     tracker.state = 'returning';
                 }
             } else {
-                // Night fell, return home with partial charge
-                tracker.state = 'returning';
+                // We've fallen into darkness - immediately head toward daylight!
+                let dirToSun = sunX - tracker.x;
+                if (dirToSun > CONFIG.MAP_SIZE / 2) dirToSun -= CONFIG.MAP_SIZE;
+                if (dirToSun < -CONFIG.MAP_SIZE / 2) dirToSun += CONFIG.MAP_SIZE;
+
+                // Sprint toward the sun
+                tracker.x += Math.sign(dirToSun) * 4 * dt;
+                tracker.x = wrapCoord(tracker.x);
+
+                // Check if still no light after trying, give up and return home
+                const newLight = getTileLightLevel(tracker.x);
+                if (newLight < 0.3 && tracker.charge > 20) {
+                    // Too dark, return with what we have
+                    tracker.state = 'returning';
+                }
             }
         }
 
