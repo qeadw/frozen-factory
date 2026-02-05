@@ -931,6 +931,14 @@
             <div class="keybind-row"><span>Cancel / Close</span><span class="keybind-key">Esc</span></div>
         </div>
 
+        <div class="keybind-section">
+            <h3>Building Tips</h3>
+            <div class="keybind-row"><span>Cable Tool</span><span class="keybind-key">Build Menu</span></div>
+            <div class="keybind-row"><span>Connect Cables</span><span class="keybind-key">Click 2 machines</span></div>
+            <div class="keybind-row"><span>Conveyors</span><span class="keybind-key">Auto-connect</span></div>
+            <div class="keybind-row"><span>Cheat Menu</span><span class="keybind-key">Type: levitysm</span></div>
+        </div>
+
         <button class="pause-btn" onclick="toggleKeybinds()">Close</button>
     </div>
 
@@ -2987,6 +2995,7 @@ document.addEventListener('keydown', (e) => {
     }
     if (e.key.toLowerCase() === 'r' && selectedBuild) {
         buildRotation = (buildRotation + 1) % 4;
+        updateBuildInfoPanel();
     }
     if (e.key === 'Tab') {
         e.preventDefault();
@@ -3287,29 +3296,61 @@ function selectBuild(type, element) {
     if (element) element.classList.add('selected');
 
     // Update selectedInfo panel with building info
-    const machine = MACHINES[type];
+    updateBuildInfoPanel();
+
+    notify(`Selected: ${MACHINES[type].name}`);
+}
+
+function updateBuildInfoPanel() {
+    if (!selectedBuild) return;
+
+    const machine = MACHINES[selectedBuild];
     const info = document.getElementById('selectedInfo');
 
     let costHtml = '';
     for (const [res, count] of Object.entries(machine.cost)) {
         const resName = RESOURCES[res]?.name || res;
-        const resColor = RESOURCES[res]?.color || '#fff';
         const hasEnough = game.robot.inventory.find(i => i.type === res && i.count >= count);
         const color = hasEnough ? '#8f8' : '#f88';
         costHtml += `<div style="color: ${color}; font-size: 11px;">• ${count}x ${resName}</div>`;
     }
 
+    // Rotation direction names
+    const rotationNames = ['→ Right', '↓ Down', '← Left', '↑ Up'];
+    const rotationArrows = ['→', '↓', '←', '↑'];
+
     info.innerHTML = `
         <h4 style="color: var(--ui-accent);">${machine.icon} ${machine.name}</h4>
-        <p style="font-size: 11px; margin: 5px 0; opacity: 0.8;">${machine.desc || 'Click on map to place'}</p>
+        <p style="font-size: 11px; margin: 5px 0; opacity: 0.8;">${machine.description || 'Click on map to place'}</p>
         <div style="margin-top: 8px;">
             <div style="font-size: 10px; color: #aaa; margin-bottom: 3px;">COST:</div>
             ${costHtml}
         </div>
         <div style="font-size: 10px; color: #888; margin-top: 8px;">Power: ${machine.power > 0 ? '+' + machine.power : machine.power}/s</div>
+        <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px;">
+            <button onclick="rotateBuilding()" style="
+                background: var(--ui-button);
+                border: 1px solid var(--ui-border);
+                color: var(--ui-text);
+                padding: 5px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            ">
+                🔄 Rotate
+            </button>
+            <span style="font-size: 12px; color: var(--ui-accent);">${rotationArrows[buildRotation]} ${rotationNames[buildRotation]}</span>
+        </div>
+        <div style="font-size: 9px; color: #666; margin-top: 5px;">Press R to rotate</div>
     `;
+}
 
-    notify(`Selected: ${machine.name}`);
+function rotateBuilding() {
+    buildRotation = (buildRotation + 1) % 4;
+    updateBuildInfoPanel();
 }
 
 function placeMachine(type, x, y) {
