@@ -1945,28 +1945,6 @@ const SPRITES = {
             ctx.fill();
         }
 
-        // Direction arrow (yellow, pointing output direction)
-        ctx.fillStyle = '#ffcc00';
-        const arrowPos = [
-            { x: 12, y: 5 },   // right
-            { x: -4, y: 10 },  // down
-            { x: -12, y: 5 },  // left
-            { x: 4, y: 0 }     // up
-        ];
-        const arrowRots = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
-        const ap = arrowPos[rot % 4];
-
-        ctx.save();
-        ctx.translate(cx + ap.x, cy + ap.y);
-        ctx.rotate(arrowRots[rot % 4]);
-        ctx.beginPath();
-        ctx.moveTo(6, 0);
-        ctx.lineTo(-2, -4);
-        ctx.lineTo(-2, 4);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-
         // Rollers on sides
         ctx.fillStyle = '#555566';
         ctx.beginPath();
